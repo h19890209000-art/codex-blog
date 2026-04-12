@@ -85,10 +85,10 @@ watch(
         <p class="eyebrow">Daily AI Briefing</p>
         <h2>{{ compact ? '每日简讯' : '全球 AI 每日简讯' }}</h2>
         <p class="muted">
-          {{ activeDate ? `${activeDate} · 自动聚合 10 条内全球 AI 时讯` : '聚合全球 AI 新闻源，生成今日简讯' }}
+          {{ activeDate ? `${activeDate} / 自动聚合 10 条全球 AI 时讯` : '聚合全球 AI 新闻源，生成今日简讯' }}
         </p>
       </div>
-      <RouterLink v-if="compact" class="link-chip" to="/briefings">查看全部</RouterLink>
+      <RouterLink v-if="compact" class="action-button action-button--soft action-link" to="/briefings">查看全部</RouterLink>
     </div>
 
     <div class="date-list">
@@ -119,11 +119,11 @@ watch(
           <div>
             <p class="source-line">
               <span>{{ item.source_name || '未知来源' }}</span>
-              <span v-if="item.source_published_at">· {{ formatTime(item.source_published_at) }}</span>
+              <span v-if="item.source_published_at"> / {{ formatTime(item.source_published_at) }}</span>
             </p>
             <h3>{{ item.sort_order }}. {{ item.title }}</h3>
           </div>
-          <button class="ghost-button small" @click="openSource(item.source_url)">原文</button>
+          <button class="action-button action-button--soft inline-action" @click="openSource(item.source_url)">原文</button>
         </div>
         <p class="summary">{{ item.summary || '点击原文查看完整报道。' }}</p>
       </article>
@@ -175,6 +175,14 @@ watch(
   gap: 18px;
   transition: transform 0.34s ease, box-shadow 0.34s ease;
   transform-style: preserve-3d;
+  --button-soft-top: rgba(255, 255, 255, 0.82);
+  --button-soft-bottom: rgba(229, 240, 249, 0.58);
+  --button-border: rgba(255, 255, 255, 0.8);
+  --button-text: #2d5372;
+  --button-shadow: 0 12px 22px rgba(35, 67, 97, 0.12);
+  --button-shadow-hover: 0 18px 28px rgba(35, 67, 97, 0.16);
+  --button-edge-left: rgba(255, 255, 255, 0.62);
+  --button-edge-right: rgba(129, 169, 199, 0.24);
 }
 
 .briefing-panel:hover {
@@ -197,34 +205,31 @@ watch(
   gap: 10px;
 }
 
-.date-chip,
-.link-chip,
-.ghost-button {
+.date-chip {
   border: none;
   border-radius: 999px;
   padding: 10px 16px;
   cursor: pointer;
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  background: rgba(255, 255, 255, 0.46);
+  color: #21425d;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.74),
+    0 8px 18px rgba(35, 67, 97, 0.08);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, color 0.22s ease;
 }
 
-.date-chip,
-.link-chip {
-  background: rgba(255, 255, 255, 0.42);
-  color: #183149;
+.date-chip:hover {
+  transform: translateY(-1px);
+  background: rgba(244, 251, 255, 0.82);
+  color: #173d5c;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.72),
-    0 8px 18px rgba(35, 67, 97, 0.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    0 12px 22px rgba(35, 67, 97, 0.1);
 }
 
 .date-chip.active {
-  background: linear-gradient(160deg, #173452, #244f73);
+  background: linear-gradient(160deg, #2a5376, #3d6f95);
   color: #fff;
-}
-
-.link-chip {
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
 }
 
 .briefing-list {
@@ -255,9 +260,10 @@ watch(
 }
 
 .briefing-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: start;
 }
 
 .source-line,
@@ -278,13 +284,96 @@ h3 {
   margin: 0;
 }
 
-.small {
-  padding: 8px 14px;
-  background: linear-gradient(160deg, #173452, #244f73);
-  color: #fff;
+.action-button {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  text-decoration: none;
+  box-sizing: border-box;
+  backdrop-filter: blur(14px) saturate(145%);
+  -webkit-backdrop-filter: blur(14px) saturate(145%);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
+}
+
+.action-button::before {
+  content: "";
+  position: absolute;
+  inset: -26% auto -26% -16%;
+  width: 24%;
+  transform: translateX(-260%) skewX(-20deg);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.18) 18%,
+    rgba(255, 255, 255, 0.92) 50%,
+    rgba(255, 255, 255, 0.26) 82%,
+    transparent 100%
+  );
+  filter: blur(1.5px);
+  opacity: 0;
+}
+
+.action-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.22) 36%, rgba(255, 255, 255, 0.05) 64%, transparent 76%),
+    linear-gradient(118deg, rgba(255, 255, 255, 0.18), transparent 28%, transparent 72%, rgba(129, 169, 199, 0.18));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 10px 18px rgba(18, 45, 68, 0.16);
+    inset 1px 1px 0 var(--button-edge-left),
+    inset -1px -1px 0 var(--button-edge-right);
+  pointer-events: none;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+}
+
+.action-button:hover::before {
+  opacity: 1;
+  animation: liquid-sweep 0.78s ease forwards;
+}
+
+.action-button--soft {
+  background:
+    linear-gradient(180deg, var(--button-soft-top), var(--button-soft-bottom)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(162, 198, 226, 0.08));
+  color: var(--button-text);
+  border-color: var(--button-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.86),
+    inset 0 -8px 14px rgba(130, 168, 198, 0.06),
+    var(--button-shadow);
+}
+
+.action-button--soft:hover {
+  background:
+    linear-gradient(180deg, var(--button-soft-top), var(--button-soft-bottom)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(162, 198, 226, 0.1));
+  color: #244763;
+  border-color: rgba(255, 255, 255, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -10px 16px rgba(130, 168, 198, 0.08),
+    var(--button-shadow-hover);
+}
+
+.action-link {
+  white-space: nowrap;
+}
+
+.inline-action {
+  align-self: start;
 }
 
 .eyebrow {
@@ -295,11 +384,24 @@ h3 {
   margin: 0 0 8px;
 }
 
+@keyframes liquid-sweep {
+  0% {
+    transform: translateX(-260%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(470%) skewX(-20deg);
+  }
+}
+
 @media (max-width: 760px) {
   .section-head,
   .briefing-top {
     display: grid;
     grid-template-columns: 1fr;
+  }
+
+  .inline-action {
+    justify-self: start;
   }
 }
 </style>

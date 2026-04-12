@@ -50,9 +50,10 @@ const readyProviderCount = computed(() => providers.value.filter((item) => item.
 const draftTagText = computed(() => (agentDraft.value?.tag_names || []).join(', '))
 const agentContextText = computed(() => agentDraft.value?.content || extractedSource.value?.content || '')
 const aiBlocks = computed(() => {
-  if (!aiResult.value) return []
+  const value = normalizeAIResult(aiResult.value)
+  if (!value) return []
   const labels = { provider: '使用模型', summary: '摘要', keywords: '关键词', meta: 'Meta 描述', tags: '标签建议', items: '灵感列表', result: '生成结果', url: '链接地址', hint: '说明', replies: '回复建议', flagged: '是否拦截', reason: '原因', raw: '原始输出', answer: '回答' }
-  return Object.entries(aiResult.value)
+  return Object.entries(value)
     .filter(([, value]) => value !== '' && value !== null && value !== undefined)
     .map(([key, value]) => ({ label: labels[key] || key, content: Array.isArray(value) ? value.join('\n') : typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value) }))
 })
@@ -62,6 +63,104 @@ function showMessage(text) {
   setTimeout(() => {
     if (systemMessage.value === text) systemMessage.value = ''
   }, 2500)
+}
+
+function cleanAIText(value) {
+  return String(value || '')
+    .replace(/\*\*/g, '')
+    .replace(/__/g, '')
+    .replace(/`/g, '')
+    .replace(/[：]/g, ':')
+    .trim()
+}
+
+function looksLikeSectionLabel(value) {
+  const normalized = cleanAIText(value).toLowerCase()
+  return ['摘要', 'summary', '关键词', '关键字', 'keywords', 'meta', 'meta 描述', 'meta描述', '描述'].includes(normalized)
+}
+
+function parseSummaryFromRaw(raw) {
+  const lines = String(raw || '')
+    .split(/\r?\n/)
+    .map((line) => cleanAIText(line).replace(/^[#\-*\d.\s]+/, '').trim())
+    .filter(Boolean)
+
+  const result = { summary: '', keywords: [], meta: '' }
+  let section = ''
+
+  for (const line of lines) {
+    const lower = line.toLowerCase()
+
+    if (lower === '摘要' || lower === 'summary') {
+      section = 'summary'
+      continue
+    }
+    if (lower === '关键词' || lower === '关键字' || lower === 'keywords') {
+      section = 'keywords'
+      continue
+    }
+    if (lower === 'meta 描述' || lower === 'meta描述' || lower === 'meta' || lower === '描述') {
+      section = 'meta'
+      continue
+    }
+
+    const match = line.match(/^(摘要|summary|关键词|关键字|keywords|meta 描述|meta描述|meta|描述):\s*(.+)$/i)
+    if (match) {
+      const label = match[1].toLowerCase()
+      const content = match[2].trim()
+      if (label === '摘要' || label === 'summary') result.summary = content
+      if (label === '关键词' || label === '关键字' || label === 'keywords') result.keywords = content.split(/[,\uff0c]/).map((item) => cleanAIText(item)).filter(Boolean)
+      if (label === 'meta 描述' || label === 'meta描述' || label === 'meta' || label === '描述') result.meta = content
+      continue
+    }
+
+    if (section === 'summary' && !result.summary) {
+      result.summary = line
+      continue
+    }
+    if (section === 'keywords' && result.keywords.length === 0) {
+      result.keywords = line.split(/[,\uff0c]/).map((item) => cleanAIText(item)).filter(Boolean)
+      continue
+    }
+    if (section === 'meta' && !result.meta) {
+      result.meta = line
+      continue
+    }
+
+    if (!result.summary) {
+      result.summary = line
+    } else if (!result.meta) {
+      result.meta = line
+    }
+  }
+
+  return result
+}
+
+function normalizeAIResult(payload) {
+  if (!payload || typeof payload !== 'object') return payload
+
+  const result = { ...payload }
+
+  if (typeof result.summary === 'string') result.summary = cleanAIText(result.summary)
+  if (typeof result.meta === 'string') result.meta = cleanAIText(result.meta)
+  if (typeof result.result === 'string') result.result = cleanAIText(result.result)
+  if (typeof result.answer === 'string') result.answer = cleanAIText(result.answer)
+  if (Array.isArray(result.keywords)) result.keywords = result.keywords.map((item) => cleanAIText(item)).filter(Boolean)
+  if (Array.isArray(result.tags)) result.tags = result.tags.map((item) => cleanAIText(item)).filter(Boolean)
+  if (Array.isArray(result.items)) result.items = result.items.map((item) => cleanAIText(item)).filter(Boolean)
+  if (Array.isArray(result.replies)) result.replies = result.replies.map((item) => cleanAIText(item)).filter(Boolean)
+
+  if (typeof result.raw === 'string') {
+    const parsed = parseSummaryFromRaw(result.raw)
+    if ((!result.summary || looksLikeSectionLabel(result.summary)) && parsed.summary) result.summary = parsed.summary
+    if ((!result.meta || looksLikeSectionLabel(result.meta)) && parsed.meta) result.meta = parsed.meta
+    if ((!Array.isArray(result.keywords) || result.keywords.length === 0 || result.keywords.every(looksLikeSectionLabel)) && parsed.keywords.length > 0) {
+      result.keywords = parsed.keywords
+    }
+  }
+
+  return result
 }
 
 function authHeaders(asJson = true) {
@@ -225,7 +324,7 @@ async function runAITool(path, payload) {
   aiLoading.value = true
   aiResult.value = { provider: '处理中', result: 'AI 正在处理，请稍候...' }
   try {
-    aiResult.value = await request(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) })
+    aiResult.value = normalizeAIResult(await request(path, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) }))
   } catch (error) {
     aiResult.value = { provider: 'error', reason: error.message }
   } finally {

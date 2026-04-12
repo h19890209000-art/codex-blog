@@ -16,6 +16,7 @@ const activeTag = ref('')
 const siteQuestion = ref('')
 const siteAnswer = ref('')
 const loading = ref(false)
+const shareNotice = ref('')
 
 const filteredArticles = computed(() => {
   return articles.value.filter((article) => {
@@ -86,6 +87,51 @@ function openArticle(articleId) {
   router.push(`/articles/${articleId}`)
 }
 
+function buildArticleShareLink(articleId) {
+  const target = router.resolve(`/articles/${articleId}`)
+  return new URL(target.href, window.location.origin).toString()
+}
+
+function showShareNotice(text) {
+  shareNotice.value = text
+  window.clearTimeout(showShareNotice.timer)
+  showShareNotice.timer = window.setTimeout(() => {
+    if (shareNotice.value === text) {
+      shareNotice.value = ''
+    }
+  }, 2200)
+}
+
+async function shareArticle(article) {
+  if (!article?.id) return
+
+  const url = buildArticleShareLink(article.id)
+  const title = article.title || '文章分享'
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title,
+        text: article.summary || title,
+        url
+      })
+      showShareNotice('已调起系统分享')
+      return
+    }
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+      showShareNotice('分享链接已复制')
+      return
+    }
+
+    showShareNotice(url)
+  } catch (error) {
+    if (error?.name === 'AbortError') return
+    showShareNotice('分享失败，请重试')
+  }
+}
+
 function chooseCategory(categoryName) {
   activeCategory.value = categoryName
   activeTag.value = ''
@@ -128,8 +174,9 @@ onMounted(async () => {
 
       <div class="hero-actions">
         <input v-model="searchKeyword" type="text" placeholder="搜索文章标题或正文" />
-        <button @click="loadArticles">搜索文章</button>
-        <button class="ghost-button" @click="clearFilters">清空筛选</button>
+        <button class="toolbar-button toolbar-button--primary" @click="loadArticles">搜索文章</button>
+        <button class="toolbar-button toolbar-button--soft" @click="clearFilters">清空筛选</button>
+        <p v-if="shareNotice" class="share-notice">{{ shareNotice }}</p>
       </div>
     </section>
 
@@ -139,7 +186,7 @@ onMounted(async () => {
           <p class="eyebrow">About</p>
           <h2>博客简介</h2>
           <p class="intro-small">
-            这个读者端包含文章、分类、标签、全站问答和每日简讯。现在点击侧边栏后，主内容区会优先展示对应结果。
+            这个读者端包含文章、分类、标签、全站问答和每日简讯。现在点左侧筛选后，主内容区会优先展示对应结果。
           </p>
         </article>
 
@@ -180,7 +227,7 @@ onMounted(async () => {
           <h2>归档</h2>
           <div class="archive-list">
             <span v-for="archive in archives" :key="archive.label">
-              {{ archive.label }} · {{ archive.count }} 篇
+              {{ archive.label }} / {{ archive.count }} 篇
             </span>
           </div>
         </article>
@@ -189,7 +236,7 @@ onMounted(async () => {
           <p class="eyebrow">Site QA</p>
           <h2>全站知识问答</h2>
           <textarea v-model="siteQuestion" rows="4" placeholder="例如：这个博客里有哪些 Go 入门内容？"></textarea>
-          <button @click="askSiteQuestion">提问全站 AI</button>
+          <button class="toolbar-button toolbar-button--primary" @click="askSiteQuestion">提问全站 AI</button>
           <pre class="result">{{ siteAnswer }}</pre>
         </article>
       </aside>
@@ -200,7 +247,7 @@ onMounted(async () => {
             <div>
               <p class="eyebrow">Focused Content</p>
               <h2>{{ activeFilterLabel }}</h2>
-              <p class="hint">已为你切换到对应内容预览，点击卡片可直接进入详情页。</p>
+              <p class="hint">已为你切换到对应内容预览，点卡片可直接进入详情页。</p>
             </div>
             <span class="focus-count">共 {{ filteredArticles.length }} 篇相关文章</span>
           </div>
@@ -223,12 +270,15 @@ onMounted(async () => {
                 <div>
                   <p class="tagline">
                     {{ article.category?.name || '未分类' }}
-                    ·
+                    /
                     {{ (article.tags || []).map((tag) => tag.name).join(' / ') || '无标签' }}
                   </p>
                   <h3>{{ article.title }}</h3>
                 </div>
-                <button class="inline-action" @click.stop="openArticle(article.id)">立即阅读</button>
+                <div class="card-actions">
+                  <button class="action-button action-button--soft" @click.stop="shareArticle(article)">分享链接</button>
+                  <button class="action-button action-button--primary" @click.stop="openArticle(article.id)">立即阅读</button>
+                </div>
               </div>
               <p>{{ article.summary || '暂无摘要' }}</p>
               <small>阅读量：{{ article.view_count }}</small>
@@ -263,14 +313,17 @@ onMounted(async () => {
                 <div>
                   <p class="tagline">
                     {{ article.category?.name || '未分类' }}
-                    ·
+                    /
                     {{ (article.tags || []).map((tag) => tag.name).join(' / ') || '无标签' }}
                   </p>
                   <h3>{{ article.title }}</h3>
                 </div>
-                <button class="inline-action" @click.stop="openArticle(article.id)">进入详情页</button>
+                <div class="card-actions">
+                  <button class="action-button action-button--soft" @click.stop="shareArticle(article)">分享链接</button>
+                  <button class="action-button action-button--primary" @click.stop="openArticle(article.id)">进入详情页</button>
+                </div>
               </div>
-              <p>{{ article.summary }}</p>
+              <p>{{ article.summary || '暂无摘要' }}</p>
               <small>阅读量：{{ article.view_count }}</small>
             </article>
           </div>
@@ -287,6 +340,13 @@ onMounted(async () => {
   margin: 0 auto;
   padding: 28px 20px 88px;
   isolation: isolate;
+  --button-blue-top: #355f82;
+  --button-blue-bottom: #274a67;
+  --button-blue-soft-top: rgba(53, 95, 130, 0.88);
+  --button-blue-soft-bottom: rgba(39, 74, 103, 0.8);
+  --button-border: rgba(255, 255, 255, 0.28);
+  --button-shadow: 0 12px 24px rgba(34, 63, 90, 0.18);
+  --button-shadow-hover: 0 18px 30px rgba(34, 63, 90, 0.24);
 }
 
 .glass {
@@ -415,21 +475,6 @@ onMounted(async () => {
     inset 0 -22px 46px rgba(98, 144, 189, 0.08);
 }
 
-.hero-stable::before {
-  background:
-    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.94), transparent 32%),
-    radial-gradient(circle at 82% 10%, rgba(255, 255, 255, 0.48), transparent 26%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(255, 255, 255, 0.18) 34%, rgba(255, 255, 255, 0.08) 70%, rgba(255, 255, 255, 0.16) 100%);
-}
-
-.hero-stable::after {
-  width: 260px;
-  height: 260px;
-  right: -30px;
-  top: -90px;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.62), transparent 66%);
-}
-
 .hero-actions,
 .archive-list {
   display: grid;
@@ -546,9 +591,17 @@ onMounted(async () => {
 }
 
 .card-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.card-actions {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
 }
 
 .chip-list {
@@ -557,52 +610,123 @@ onMounted(async () => {
   gap: 10px;
 }
 
-.chip-button,
-button {
+.chip-button {
   border: none;
   border-radius: 999px;
   padding: 11px 16px;
-  background: linear-gradient(160deg, #173452, #244f73);
-  color: white;
-  cursor: pointer;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 10px 18px rgba(18, 45, 68, 0.18);
-  transition: transform 0.24s ease, box-shadow 0.24s ease, background 0.24s ease;
-}
-
-button:hover {
-  transform: translateY(-2px) translateZ(10px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.26),
-    0 16px 24px rgba(18, 45, 68, 0.22);
-}
-
-.hero-actions button:hover,
-.hero-actions .ghost-button:hover {
-  transform: none;
-}
-
-.chip-button {
   background: rgba(255, 255, 255, 0.44);
   color: #183149;
+  cursor: pointer;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.66),
     0 8px 18px rgba(35, 67, 97, 0.08);
+  transition: transform 0.24s ease, box-shadow 0.24s ease, background 0.24s ease, color 0.24s ease;
+}
+
+.chip-button:hover {
+  transform: translateY(-1px);
+  background: rgba(246, 251, 255, 0.88);
+  color: #143a58;
 }
 
 .chip-button.selected {
-  background: linear-gradient(160deg, #173452, #244f73);
+  background: linear-gradient(160deg, #2a5376, #3d6f95);
   color: #fff;
 }
 
-.ghost-button {
-  background: rgba(255, 255, 255, 0.42);
-  color: #183149;
+.action-button,
+.toolbar-button {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 118px;
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
+}
+
+.action-button::before,
+.toolbar-button::before {
+  content: "";
+  position: absolute;
+  inset: -18% auto -18% -30%;
+  width: 42%;
+  transform: translateX(-190%) skewX(-24deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.86), transparent);
+  opacity: 0;
+}
+
+.action-button::after,
+.toolbar-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 52%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+}
+
+.action-button:hover,
+.toolbar-button:hover {
+  transform: translateY(-2px);
+}
+
+.action-button:hover::before,
+.toolbar-button:hover::before {
+  opacity: 1;
+  animation: liquid-sweep 0.78s ease forwards;
+}
+
+.action-button--primary,
+.toolbar-button--primary {
+  background: linear-gradient(180deg, var(--button-blue-top), var(--button-blue-bottom));
+  color: #f8fbff;
+  border-color: var(--button-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    var(--button-shadow);
+}
+
+.action-button--primary:hover,
+.toolbar-button--primary:hover {
+  background: linear-gradient(180deg, var(--button-blue-top), var(--button-blue-bottom));
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.36);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 14px 20px rgba(255, 255, 255, 0.06),
+    var(--button-shadow-hover);
+}
+
+.action-button--soft,
+.toolbar-button--soft {
+  background: linear-gradient(180deg, var(--button-blue-soft-top), var(--button-blue-soft-bottom));
+  color: #f6fbff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 10px 22px rgba(35, 67, 97, 0.14);
+}
+
+.action-button--soft:hover,
+.toolbar-button--soft:hover {
+  background: linear-gradient(180deg, var(--button-blue-soft-top), var(--button-blue-soft-bottom));
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 14px 20px rgba(255, 255, 255, 0.05),
+    var(--button-shadow-hover);
 }
 
 .hero-actions input,
-.hero-actions button {
+.hero-actions .toolbar-button {
   min-height: 54px;
 }
 
@@ -610,12 +734,15 @@ button:hover {
   padding-inline: 18px;
 }
 
-.hero-actions button {
+.hero-actions .toolbar-button {
   width: 100%;
 }
 
-.inline-action {
-  flex-shrink: 0;
+.share-notice {
+  margin: 0;
+  font-size: 13px;
+  color: #54789a;
+  text-align: center;
 }
 
 input,
@@ -647,79 +774,54 @@ textarea {
 }
 
 @keyframes liquid-highlight {
-  0% {
-    transform: translate3d(-4%, 0, 0) scaleX(0.98);
-    opacity: 0.9;
-  }
-  50% {
-    transform: translate3d(3%, 2%, 0) scaleX(1.02);
-    opacity: 1;
-  }
-  100% {
-    transform: translate3d(6%, 4%, 0) scaleX(1.04);
-    opacity: 0.84;
-  }
+  0% { transform: translate3d(-4%, 0, 0) scaleX(0.98); opacity: 0.9; }
+  50% { transform: translate3d(3%, 2%, 0) scaleX(1.02); opacity: 1; }
+  100% { transform: translate3d(6%, 4%, 0) scaleX(1.04); opacity: 0.84; }
 }
 
 @keyframes liquid-glow {
-  0% {
-    transform: translate3d(0, 0, 0) scale(1);
-    opacity: 0.62;
-  }
-  50% {
-    transform: translate3d(-20px, 14px, 0) scale(1.08);
-    opacity: 0.82;
-  }
-  100% {
-    transform: translate3d(8px, 26px, 0) scale(0.96);
-    opacity: 0.58;
-  }
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.62; }
+  50% { transform: translate3d(-20px, 14px, 0) scale(1.08); opacity: 0.82; }
+  100% { transform: translate3d(8px, 26px, 0) scale(0.96); opacity: 0.58; }
+}
+
+@keyframes liquid-sweep {
+  0% { transform: translateX(-190%) skewX(-24deg); }
+  100% { transform: translateX(380%) skewX(-24deg); }
 }
 
 @keyframes orb-float-a {
-  0%, 100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(36px, 20px, 0);
-  }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(36px, 20px, 0); }
 }
 
 @keyframes orb-float-b {
-  0%, 100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(-28px, 24px, 0);
-  }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-28px, 24px, 0); }
 }
 
 @keyframes orb-float-c {
-  0%, 100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(18px, -16px, 0);
-  }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(18px, -16px, 0); }
 }
 
 @keyframes orb-float-d {
-  0%, 100% {
-    transform: translate3d(0, 0, 0);
-  }
-  50% {
-    transform: translate3d(-22px, 18px, 0);
-  }
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-22px, 18px, 0); }
 }
 
 @media (max-width: 980px) {
   .hero,
   .layout,
-  .card-top,
   .section-head,
   .focus-list {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .card-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .hero {
@@ -729,6 +831,12 @@ textarea {
   .ambient-field {
     inset: -20px -60px auto;
     height: 420px;
+  }
+}
+
+@media (max-width: 760px) {
+  .card-top {
+    grid-template-columns: 1fr;
   }
 }
 </style>

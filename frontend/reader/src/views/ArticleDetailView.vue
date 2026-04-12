@@ -7,8 +7,6 @@ const apiBase = 'http://127.0.0.1:8080/api/public'
 const route = useRoute()
 const router = useRouter()
 
-// 这里创建一个 Markdown 渲染器。
-// 首版先保持配置简单，方便你以后继续看懂和扩展。
 const markdown = new MarkdownIt({
   html: false,
   linkify: true,
@@ -21,6 +19,7 @@ const allArticles = ref([])
 const titleAnalysis = ref('')
 const qaAnswer = ref('')
 const loading = ref(false)
+const shareNotice = ref('')
 const articleQuestion = ref('')
 const commentForm = ref({
   author: '',
@@ -29,35 +28,15 @@ const commentForm = ref({
 
 const articleId = computed(() => Number(route.params.id))
 
-// markdownContent 用来把 Markdown 正文转成可直接插入页面的 HTML。
 const markdownContent = computed(() => {
-  if (!article.value?.content) {
-    return ''
-  }
-
+  if (!article.value?.content) return ''
   return markdown.render(article.value.content)
 })
 
-// currentArticleIndex 用来找到当前文章在文章列表里的位置。
-const currentArticleIndex = computed(() => {
-  return allArticles.value.findIndex((item) => item.id === article.value?.id)
-})
-
-// prevArticle 表示上一篇文章。
-const prevArticle = computed(() => {
-  if (currentArticleIndex.value <= 0) {
-    return null
-  }
-
-  return allArticles.value[currentArticleIndex.value - 1]
-})
-
-// nextArticle 表示下一篇文章。
+const currentArticleIndex = computed(() => allArticles.value.findIndex((item) => item.id === article.value?.id))
+const prevArticle = computed(() => (currentArticleIndex.value <= 0 ? null : allArticles.value[currentArticleIndex.value - 1]))
 const nextArticle = computed(() => {
-  if (currentArticleIndex.value < 0 || currentArticleIndex.value >= allArticles.value.length - 1) {
-    return null
-  }
-
+  if (currentArticleIndex.value < 0 || currentArticleIndex.value >= allArticles.value.length - 1) return null
   return allArticles.value[currentArticleIndex.value + 1]
 })
 
@@ -73,14 +52,11 @@ async function request(path, options = {}) {
 }
 
 async function loadArticleDetail() {
-  if (!articleId.value) {
-    return
-  }
+  if (!articleId.value) return
 
   loading.value = true
 
   try {
-    // 这里多拉一次文章列表，是为了做“上一篇 / 下一篇”导航。
     const [articleData, commentData, articleList] = await Promise.all([
       request(`/articles/${articleId.value}`),
       request(`/articles/${articleId.value}/comments`),
@@ -99,11 +75,9 @@ async function loadArticleDetail() {
 }
 
 async function analyzeTitle() {
-  if (!article.value) {
-    return
-  }
+  if (!article.value) return
 
-  titleAnalysis.value = 'AI 正在思考这个标题的含义...'
+  titleAnalysis.value = 'AI 正在分析标题...'
 
   const data = await request('/ai/analyze-title', {
     method: 'POST',
@@ -120,9 +94,7 @@ async function analyzeTitle() {
 }
 
 async function askArticleQuestion() {
-  if (!article.value || !articleQuestion.value.trim()) {
-    return
-  }
+  if (!article.value || !articleQuestion.value.trim()) return
 
   qaAnswer.value = 'AI 正在基于当前文章回答...'
 
@@ -140,9 +112,7 @@ async function askArticleQuestion() {
 }
 
 async function submitComment() {
-  if (!article.value || !commentForm.value.content.trim()) {
-    return
-  }
+  if (!article.value || !commentForm.value.content.trim()) return
 
   await request(`/articles/${article.value.id}/comments`, {
     method: 'POST',
@@ -165,11 +135,54 @@ function goBackHome() {
 }
 
 function openSiblingArticle(targetArticle) {
-  if (!targetArticle?.id) {
-    return
-  }
-
+  if (!targetArticle?.id) return
   router.push(`/articles/${targetArticle.id}`)
+}
+
+function buildShareLink(targetArticle = article.value) {
+  if (!targetArticle?.id) return ''
+  const resolved = router.resolve(`/articles/${targetArticle.id}`)
+  return new URL(resolved.href, window.location.origin).toString()
+}
+
+function showShareNotice(text) {
+  shareNotice.value = text
+  window.clearTimeout(showShareNotice.timer)
+  showShareNotice.timer = window.setTimeout(() => {
+    if (shareNotice.value === text) {
+      shareNotice.value = ''
+    }
+  }, 2200)
+}
+
+async function shareCurrentArticle() {
+  if (!article.value?.id) return
+
+  const url = buildShareLink()
+  const title = article.value.title || '文章分享'
+
+  try {
+    if (navigator.share) {
+      await navigator.share({
+        title,
+        text: article.value.summary || title,
+        url
+      })
+      showShareNotice('已调起系统分享')
+      return
+    }
+
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url)
+      showShareNotice('分享链接已复制')
+      return
+    }
+
+    showShareNotice(url)
+  } catch (error) {
+    if (error?.name === 'AbortError') return
+    showShareNotice('分享失败，请重试')
+  }
 }
 
 onMounted(loadArticleDetail)
@@ -193,15 +206,21 @@ watch(() => route.params.id, loadArticleDetail)
         class="hero-cover glass reveal delay-1"
         :style="article?.cover_url ? { backgroundImage: `linear-gradient(135deg, rgba(15,32,48,.72), rgba(46,79,106,.46)), url(${article.cover_url})` } : {}"
       >
-        <button class="ghost-button back-button" @click="goBackHome">返回首页</button>
+        <div class="hero-actions">
+          <button class="action-button action-button--soft" @click="goBackHome">返回首页</button>
+          <button class="action-button action-button--soft" @click="shareCurrentArticle">分享链接</button>
+        </div>
         <p class="eyebrow">Article Detail</p>
         <h1>{{ article?.title }}</h1>
         <p class="tagline">
           分类：{{ article?.category?.name || '未分类' }}
-          · 标签：{{ (article?.tags || []).map((tag) => tag.name).join(' / ') || '暂无标签' }}
-          · 阅读量：{{ article?.view_count || 0 }}
+          /
+          标签：{{ (article?.tags || []).map((tag) => tag.name).join(' / ') || '暂无标签' }}
+          /
+          阅读量：{{ article?.view_count || 0 }}
         </p>
         <p class="article-summary">{{ article?.summary }}</p>
+        <p v-if="shareNotice" class="share-notice">{{ shareNotice }}</p>
       </article>
 
       <article v-if="article" class="glass panel reveal delay-2">
@@ -210,7 +229,7 @@ watch(() => route.params.id, loadArticleDetail)
             <p class="eyebrow">Markdown Article</p>
             <h2>正文内容</h2>
           </div>
-          <button @click="analyzeTitle">AI 解析标题</button>
+          <button class="action-button action-button--primary" @click="analyzeTitle">AI 解析标题</button>
         </div>
 
         <div class="markdown-body" v-html="markdownContent"></div>
@@ -225,7 +244,7 @@ watch(() => route.params.id, loadArticleDetail)
         <article class="glass panel reveal delay-4">
           <h3>文章智能问答</h3>
           <textarea v-model="articleQuestion" rows="4" placeholder="例如：这篇文章主要讲了什么？"></textarea>
-          <button @click="askArticleQuestion">提问当前文章</button>
+          <button class="action-button action-button--primary" @click="askArticleQuestion">提问当前文章</button>
           <pre class="result">{{ qaAnswer }}</pre>
         </article>
       </section>
@@ -249,7 +268,7 @@ watch(() => route.params.id, loadArticleDetail)
         <div class="comment-form">
           <input v-model="commentForm.author" type="text" placeholder="你的昵称，可留空" />
           <textarea v-model="commentForm.content" rows="3" placeholder="写下你的评论"></textarea>
-          <button @click="submitComment">提交评论</button>
+          <button class="action-button action-button--primary" @click="submitComment">提交评论</button>
         </div>
 
         <div class="comment-list">
@@ -269,6 +288,13 @@ watch(() => route.params.id, loadArticleDetail)
   max-width: 1100px;
   margin: 0 auto;
   padding: 36px 20px 92px;
+  --button-blue-top: #355f82;
+  --button-blue-bottom: #274a67;
+  --button-blue-soft-top: rgba(53, 95, 130, 0.88);
+  --button-blue-soft-bottom: rgba(39, 74, 103, 0.8);
+  --button-border: rgba(255, 255, 255, 0.28);
+  --button-shadow: 0 12px 24px rgba(34, 63, 90, 0.18);
+  --button-shadow-hover: 0 18px 30px rgba(34, 63, 90, 0.24);
 }
 
 .detail-shell {
@@ -323,6 +349,13 @@ watch(() => route.params.id, loadArticleDetail)
   transform: translateZ(0);
 }
 
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
 .panel {
   padding: 26px;
   transition: transform 0.34s ease, box-shadow 0.34s ease;
@@ -334,10 +367,6 @@ watch(() => route.params.id, loadArticleDetail)
   box-shadow:
     0 34px 82px rgba(32, 64, 93, 0.22),
     inset 0 1px 0 rgba(255, 255, 255, 0.76);
-}
-
-.back-button {
-  margin-bottom: 14px;
 }
 
 .section-head {
@@ -359,17 +388,23 @@ watch(() => route.params.id, loadArticleDetail)
   color: rgba(255, 255, 255, 0.78);
 }
 
-.tagline {
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 13px;
-  line-height: 1.8;
-}
-
+.tagline,
 .article-summary,
 .result,
 .comment-card p,
 .sibling-card p {
   line-height: 1.9;
+}
+
+.tagline {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+}
+
+.share-notice {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
 }
 
 .markdown-body {
@@ -499,30 +534,88 @@ watch(() => route.params.id, loadArticleDetail)
   color: #5d7388;
 }
 
-button {
-  border: none;
+.action-button {
+  position: relative;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 118px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 999px;
-  padding: 11px 16px;
-  background: linear-gradient(160deg, #173452, #244f73);
-  color: white;
   cursor: pointer;
+  box-sizing: border-box;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
+}
+
+.action-button::before {
+  content: "";
+  position: absolute;
+  inset: -18% auto -18% -30%;
+  width: 42%;
+  transform: translateX(-190%) skewX(-24deg);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.86), transparent);
+  opacity: 0;
+}
+
+.action-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 52%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.04));
+  pointer-events: none;
+}
+
+.action-button:hover {
+  transform: translateY(-2px);
+}
+
+.action-button:hover::before {
+  opacity: 1;
+  animation: liquid-sweep 0.78s ease forwards;
+}
+
+.action-button--primary {
+  background: linear-gradient(180deg, var(--button-blue-top), var(--button-blue-bottom));
+  color: #f8fbff;
+  border-color: var(--button-border);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    0 10px 18px rgba(18, 45, 68, 0.18);
-  transition: transform 0.24s ease, box-shadow 0.24s ease;
+    var(--button-shadow);
 }
 
-button:hover {
-  transform: translateY(-2px) translateZ(10px);
+.action-button--primary:hover {
+  background: linear-gradient(180deg, var(--button-blue-top), var(--button-blue-bottom));
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.36);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    0 16px 24px rgba(18, 45, 68, 0.22);
+    inset 0 14px 20px rgba(255, 255, 255, 0.06),
+    var(--button-shadow-hover);
 }
 
-.ghost-button {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+.action-button--soft {
+  background: linear-gradient(180deg, var(--button-blue-soft-top), var(--button-blue-soft-bottom));
+  color: #f6fbff;
+  border-color: var(--button-border);
   backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 10px 22px rgba(35, 67, 97, 0.14);
+}
+
+.action-button--soft:hover {
+  background: linear-gradient(180deg, var(--button-blue-soft-top), var(--button-blue-soft-bottom));
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 14px 20px rgba(255, 255, 255, 0.05),
+    var(--button-shadow-hover);
 }
 
 input,
@@ -562,21 +655,10 @@ textarea {
   animation: shimmer 1.4s infinite;
 }
 
-.hero-skeleton {
-  height: 260px;
-}
-
-.content-skeleton {
-  height: 420px;
-}
-
-.panel-skeleton {
-  height: 220px;
-}
-
-.comment-skeleton {
-  height: 320px;
-}
+.hero-skeleton { height: 260px; }
+.content-skeleton { height: 420px; }
+.panel-skeleton { height: 220px; }
+.comment-skeleton { height: 320px; }
 
 .reveal {
   opacity: 0;
@@ -602,6 +684,11 @@ textarea {
   to {
     transform: translateX(100%);
   }
+}
+
+@keyframes liquid-sweep {
+  0% { transform: translateX(-190%) skewX(-24deg); }
+  100% { transform: translateX(380%) skewX(-24deg); }
 }
 
 @media (max-width: 980px) {

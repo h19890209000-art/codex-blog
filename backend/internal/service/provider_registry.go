@@ -141,11 +141,11 @@ func (registry *ProviderRegistry) StatusList() []ProviderStatus {
 func (registry *ProviderRegistry) featureCandidates(feature string) []string {
 	switch feature {
 	case "analyze_title":
-		return uniqueAliases(registry.routing.AnalyzeTitle, "glm", "minimax", "openai", "ollama")
+		return uniqueAliases(registry.routing.AnalyzeTitle, "xiaomi", "glm", "minimax", "openai", "ollama")
 	case "summary":
-		return uniqueAliases(registry.routing.Summary, "glm", "minimax", "openai", "ollama")
+		return uniqueAliases(registry.routing.Summary, "xiaomi", "glm", "minimax", "openai", "ollama")
 	case "chat":
-		return uniqueAliases(registry.routing.Chat, "minimax", "glm", "openai", "ollama")
+		return uniqueAliases(registry.routing.Chat, "xiaomi", "minimax", "glm", "openai", "ollama")
 	case "moderate":
 		return uniqueAliases(registry.routing.Moderate, "xiaomi", "openai", "glm")
 	case "image":
