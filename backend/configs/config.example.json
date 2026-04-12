@@ -1,0 +1,78 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "read_timeout_seconds": 15,
+    "write_timeout_seconds": 15
+  },
+  "database": {
+    "host": "127.0.0.1",
+    "port": 3306,
+    "username": "root",
+    "password": "123456",
+    "database_name": "ai_blog",
+    "charset": "utf8mb4"
+  },
+  "auth": {
+    "token_secret": "replace-with-your-own-long-secret",
+    "default_admin_username": "admin",
+    "default_admin_password": "admin123456",
+    "default_admin_display_name": "超级管理员"
+  },
+  "ai": {
+    "routing": {
+      "analyze_title": "glm",
+      "summary": "glm",
+      "chat": "minimax",
+      "moderate": "xiaomi",
+      "image": "openai",
+      "embedding": "ollama",
+      "tts": "minimax"
+    },
+    "providers": {
+      "glm": {
+        "type": "glm",
+        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "api_key": "replace-with-your-glm-key",
+        "model": "glm-5"
+      },
+      "minimax": {
+        "type": "minimax",
+        "base_url": "https://api.minimaxi.com/anthropic/v1",
+        "api_key": "replace-with-your-minimax-key",
+        "group_id": "",
+        "model": "MiniMax-M2.7"
+      },
+      "xiaomi": {
+        "type": "xiaomi",
+        "base_url": "https://api.xiaomimimo.com/v1",
+        "api_key": "replace-with-your-xiaomi-key",
+        "model": "mimo-v2-pro"
+      },
+      "openai": {
+        "type": "openai",
+        "base_url": "https://api.openai.com/v1",
+        "api_key": "replace-with-your-openai-key",
+        "model": "gpt-4.1-mini"
+      },
+      "ollama": {
+        "type": "ollama",
+        "base_url": "http://127.0.0.1:11434",
+        "api_key": "",
+        "model": "qwen2.5:7b"
+      }
+    }
+  },
+  "oss": {
+    "endpoint": "oss-cn-guangzhou.aliyuncs.com",
+    "region": "oss-cn-guangzhou",
+    "access_key_id": "replace-with-your-aliyun-access-key-id",
+    "access_key_secret": "replace-with-your-aliyun-access-key-secret",
+    "bucket": "nan-huai-obsidian",
+    "prefix": "blog"
+  },
+  "sync": {
+    "enabled": true,
+    "interval_minutes": 60
+  }
+}

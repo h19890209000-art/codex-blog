@@ -1,0 +1,6 @@
+logs/
+backend/configs/config.local.json
+frontend/admin/dist/
+frontend/reader/dist/
+frontend/admin/node_modules/
+frontend/reader/node_modules/
