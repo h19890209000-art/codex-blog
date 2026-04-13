@@ -102,6 +102,12 @@ function showShareNotice(text) {
   }, 2200)
 }
 
+function scrollToPageTop() {
+  if (window.scrollY > 8) {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }
+}
+
 async function shareArticle(article) {
   if (!article?.id) return
 
@@ -135,13 +141,13 @@ async function shareArticle(article) {
 function chooseCategory(categoryName) {
   activeCategory.value = categoryName
   activeTag.value = ''
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  scrollToPageTop()
 }
 
 function chooseTag(tagName) {
   activeTag.value = tagName
   activeCategory.value = ''
-  window.scrollTo({ top: 0, behavior: 'smooth' })
+  scrollToPageTop()
 }
 
 function clearFilters() {

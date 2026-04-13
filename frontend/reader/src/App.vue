@@ -84,13 +84,20 @@ select {
 
 .page-enter-active,
 .page-leave-active {
-  transition: opacity 0.42s ease, transform 0.42s ease, filter 0.42s ease;
+  transition: opacity 0.24s ease-out, transform 0.24s ease-out;
+  will-change: opacity, transform;
 }
 
 .page-enter-from,
 .page-leave-to {
   opacity: 0;
-  transform: translateY(24px) rotateX(8deg);
-  filter: blur(6px);
+  transform: translateY(12px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-active,
+  .page-leave-active {
+    transition: none;
+  }
 }
 </style>
