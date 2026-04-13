@@ -398,8 +398,68 @@ h3 {
     grid-template-columns: 1fr;
   }
 
+  .panel {
+    padding: 18px;
+  }
+
+  .briefing-panel,
+  .briefing-card {
+    border-radius: 24px;
+  }
+
+  .briefing-panel:hover,
+  .briefing-card:hover {
+    transform: none;
+  }
+
+  .date-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .date-list::-webkit-scrollbar {
+    display: none;
+  }
+
+  .date-chip {
+    flex: 0 0 auto;
+  }
+
+  .briefing-card {
+    padding: 16px;
+    gap: 8px;
+  }
+
   .inline-action {
-    justify-self: start;
+    justify-self: stretch;
+    width: 100%;
+  }
+
+  .action-button {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 540px) {
+  .panel {
+    padding: 16px;
+  }
+
+  .briefing-panel,
+  .briefing-card {
+    border-radius: 20px;
+  }
+
+  .summary,
+  .muted,
+  .empty-state {
+    font-size: 14px;
+  }
+
+  .action-link {
+    width: 100%;
   }
 }
 </style>

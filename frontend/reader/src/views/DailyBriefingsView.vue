@@ -93,9 +93,44 @@ import DailyBriefingPanel from '../components/DailyBriefingPanel.vue'
 }
 
 @media (max-width: 760px) {
+  .page {
+    padding: 16px 12px calc(104px + env(safe-area-inset-bottom));
+    gap: 16px;
+  }
+
+  .glass,
+  .hero {
+    border-radius: 24px;
+  }
+
   .hero {
     display: grid;
     grid-template-columns: 1fr;
+    padding: 18px;
+    gap: 14px;
+  }
+
+  .glass:hover {
+    transform: none;
+  }
+
+  .back-link {
+    align-self: start;
+  }
+}
+
+@media (max-width: 540px) {
+  .page {
+    padding: 14px 10px calc(98px + env(safe-area-inset-bottom));
+  }
+
+  .hero {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .intro {
+    font-size: 14px;
   }
 }
 </style>

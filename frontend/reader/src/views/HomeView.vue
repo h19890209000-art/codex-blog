@@ -834,6 +834,14 @@ textarea {
     min-height: auto;
   }
 
+  .content {
+    order: 1;
+  }
+
+  .sidebar {
+    order: 2;
+  }
+
   .ambient-field {
     inset: -20px -60px auto;
     height: 420px;
@@ -841,8 +849,142 @@ textarea {
 }
 
 @media (max-width: 760px) {
+  .page {
+    padding: 16px 12px calc(104px + env(safe-area-inset-bottom));
+  }
+
+  .ambient-field {
+    inset: -10px -40px auto;
+    height: 300px;
+    opacity: 0.72;
+  }
+
+  .orb {
+    filter: blur(18px);
+  }
+
+  .hero {
+    padding: 18px;
+    gap: 14px;
+    border-radius: 24px;
+  }
+
+  .hero-actions {
+    gap: 10px;
+    padding-top: 0;
+  }
+
+  .layout,
+  .sidebar,
+  .content {
+    gap: 14px;
+  }
+
+  .panel {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .panel:hover,
+  .article-card:hover,
+  .article-card:focus-visible {
+    transform: none;
+  }
+
+  .section-head {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .section-head > * {
+    min-width: 0;
+  }
+
+  .focus-list,
+  .card-list {
+    gap: 12px;
+  }
+
   .card-top {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .card,
+  .article-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .card-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .card-actions > * {
+    width: 100%;
+  }
+
+  .archive-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chip-list {
+    gap: 8px;
+  }
+
+  .chip-button,
+  .action-button,
+  .toolbar-button,
+  input,
+  textarea {
+    min-height: 44px;
+  }
+
+  .result {
+    min-height: 60px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+}
+
+@media (max-width: 540px) {
+  .page {
+    padding: 14px 10px calc(98px + env(safe-area-inset-bottom));
+  }
+
+  .hero,
+  .panel {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .eyebrow {
+    letter-spacing: 0.18em;
+  }
+
+  .intro,
+  .intro-small,
+  .hint,
+  .result,
+  .archive-list,
+  .focus-count {
+    font-size: 14px;
+  }
+
+  .card-actions,
+  .archive-list {
+    grid-template-columns: 1fr;
+  }
+
+  .action-button,
+  .toolbar-button {
+    width: 100%;
+  }
+
+  .share-notice {
+    text-align: left;
   }
 }
 </style>

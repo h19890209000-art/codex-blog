@@ -32,6 +32,7 @@ body {
   margin: 0;
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   min-height: 100vh;
+  min-height: 100svh;
   background-color: var(--reader-bg);
   background:
     radial-gradient(circle at 14% 18%, rgba(110, 188, 255, 0.42), transparent 0 24%),
@@ -41,6 +42,11 @@ body {
   color: var(--reader-ink);
   overflow-x: hidden;
   perspective: 1400px;
+}
+
+#app {
+  min-height: 100vh;
+  min-height: 100svh;
 }
 
 body::before,
@@ -98,6 +104,32 @@ select {
   .page-enter-active,
   .page-leave-active {
     transition: none;
+  }
+}
+
+@media (max-width: 760px) {
+  body {
+    perspective: none;
+    background:
+      radial-gradient(circle at 20% 12%, rgba(110, 188, 255, 0.26), transparent 0 22%),
+      radial-gradient(circle at 82% 8%, rgba(255, 228, 178, 0.24), transparent 0 16%),
+      linear-gradient(160deg, #eef4fb 0%, #edf1f7 46%, #f7efe7 100%);
+  }
+
+  body::before {
+    width: 220px;
+    height: 220px;
+    top: 64px;
+    left: -96px;
+    opacity: 0.6;
+  }
+
+  body::after {
+    width: 240px;
+    height: 240px;
+    right: -110px;
+    bottom: 56px;
+    opacity: 0.56;
   }
 }
 </style>

@@ -692,4 +692,135 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 760px) {
+  .page {
+    padding: 16px 12px calc(104px + env(safe-area-inset-bottom));
+  }
+
+  .detail-shell,
+  .double-panel {
+    gap: 14px;
+  }
+
+  .hero-cover,
+  .panel,
+  .sibling-card {
+    padding: 18px;
+    border-radius: 24px;
+  }
+
+  .panel:hover,
+  .hero-cover:hover,
+  .sibling-card:hover {
+    transform: none;
+  }
+
+  .hero-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .hero-actions .action-button {
+    width: 100%;
+  }
+
+  .section-head {
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .section-head .action-button {
+    width: 100%;
+  }
+
+  .markdown-body {
+    padding: 18px;
+    border-radius: 20px;
+    overflow-x: auto;
+  }
+
+  .markdown-body :deep(h1) {
+    font-size: 28px;
+    margin-bottom: 16px;
+  }
+
+  .markdown-body :deep(h2) {
+    font-size: 24px;
+    margin: 24px 0 12px;
+  }
+
+  .markdown-body :deep(h3) {
+    font-size: 19px;
+  }
+
+  .markdown-body :deep(p),
+  .markdown-body :deep(li) {
+    font-size: 15px;
+  }
+
+  .markdown-body :deep(pre) {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .comment-form,
+  .comment-list {
+    gap: 10px;
+  }
+
+  .comment-card {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .result,
+  input,
+  textarea,
+  .action-button {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 540px) {
+  .page {
+    padding: 14px 10px calc(98px + env(safe-area-inset-bottom));
+  }
+
+  .hero-cover,
+  .panel,
+  .sibling-card {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .hero-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .article-summary,
+  .result,
+  .comment-card p,
+  .sibling-card p {
+    font-size: 14px;
+  }
+
+  .markdown-body {
+    padding: 16px;
+  }
+
+  .markdown-body :deep(h1) {
+    font-size: 25px;
+  }
+
+  .markdown-body :deep(h2) {
+    font-size: 21px;
+  }
+
+  .markdown-body :deep(h3) {
+    font-size: 18px;
+  }
+}
 </style>

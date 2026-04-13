@@ -44,17 +44,18 @@ const agentChatForm = ref({ message: '' })
 const mobileMenuOpen = ref(false)
 
 const navTabs = [
-  { key: 'dashboard', label: '仪表盘', mobileLabel: '首页', icon: '盘', hint: '查看整体概览' },
-  { key: 'agent', label: 'Agent 工作台', mobileLabel: 'Agent', icon: '稿', hint: '整理素材与草稿' },
-  { key: 'articles', label: '文章管理', mobileLabel: '文章', icon: '文', hint: '编辑与发布内容' },
-  { key: 'briefings', label: '每日简讯', mobileLabel: '简讯', icon: '讯', hint: '管理每日快讯' },
-  { key: 'taxonomy', label: '分类标签', mobileLabel: '分类', icon: '类', hint: '维护分类和标签' },
-  { key: 'comments', label: '评论管理', mobileLabel: '评论', icon: '评', hint: '审核互动内容' },
-  { key: 'users', label: '用户管理', mobileLabel: '用户', icon: '人', hint: '查看用户与权限' },
-  { key: 'ai', label: 'AI 工具台', mobileLabel: 'AI', icon: '智', hint: '生成摘要和优化' },
-  { key: 'settings', label: '系统设置', mobileLabel: '设置', icon: '设', hint: '配置系统与 OSS' }
+  { key: 'dashboard', label: '仪表盘', mobileLabel: '首页', hint: '查看整体概览', iconPaths: ['M4.75 10.25 12 4.75l7.25 5.5', 'M6.75 9.75v9.5h4.25V14.5h2v4.75h4.25v-9.5'] },
+  { key: 'agent', label: 'Agent 工作台', mobileLabel: 'Agent', hint: '整理素材与草稿', iconPaths: ['M7.25 16.75h9.5', 'M8.25 6.75h7.5', 'M8.5 12h7', 'M16.5 5.5 18.5 7.5 9.25 16.75 6.5 17.5 7.25 14.75 16.5 5.5z'] },
+  { key: 'articles', label: '文章管理', mobileLabel: '文章', hint: '编辑与发布内容', iconPaths: ['M8 4.75h5.5l3.75 3.75v10.75H8z', 'M13.5 4.75v4h4', 'M10.25 12h5.5', 'M10.25 15.25h5.5'] },
+  { key: 'briefings', label: '每日简讯', mobileLabel: '简讯', hint: '管理每日快讯', iconPaths: ['M6.75 6.25h10.5a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H9l-3.75 2.5v-2.5H6.75a1.5 1.5 0 0 1-1.5-1.5v-8.5a1.5 1.5 0 0 1 1.5-1.5z', 'M8.5 10h7', 'M8.5 13.25h4.5'] },
+  { key: 'taxonomy', label: '分类标签', mobileLabel: '分类', hint: '维护分类和标签', iconPaths: ['M4.75 7.25h6.5v6.5h-6.5z', 'M12.75 7.25h6.5v6.5h-6.5z', 'M8 13.75v5.5', 'M16 13.75v5.5'] },
+  { key: 'comments', label: '评论管理', mobileLabel: '评论', hint: '审核互动内容', iconPaths: ['M6.75 6.25h10.5a1.5 1.5 0 0 1 1.5 1.5v6.5a1.5 1.5 0 0 1-1.5 1.5H12l-4.5 3v-3H6.75a1.5 1.5 0 0 1-1.5-1.5v-6.5a1.5 1.5 0 0 1 1.5-1.5z', 'M8.5 10h7', 'M8.5 13.25h5'] },
+  { key: 'users', label: '用户管理', mobileLabel: '用户', hint: '查看用户与权限', iconPaths: ['M12 12.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5z', 'M6.75 18.5a5.25 5.25 0 0 1 10.5 0'] },
+  { key: 'ai', label: 'AI 工具台', mobileLabel: 'AI', hint: '生成摘要和优化', iconPaths: ['M12 5.25v2.75', 'M12 16v2.75', 'M5.25 12h2.75', 'M16 12h2.75', 'M7.5 7.5l1.95 1.95', 'M14.55 14.55l1.95 1.95', 'M16.5 7.5l-1.95 1.95', 'M9.45 14.55 7.5 16.5', 'M12 9.25a2.75 2.75 0 1 1 0 5.5 2.75 2.75 0 0 1 0-5.5z'] },
+  { key: 'settings', label: '系统设置', mobileLabel: '设置', hint: '配置系统与 OSS', iconPaths: ['M12 5.5v3', 'M12 15.5v3', 'M5.5 8.5h13', 'M5.5 15.5h13', 'M9 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z', 'M15 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z'] }
 ]
 const mobilePrimaryTabKeys = ['dashboard', 'articles', 'briefings', 'ai']
+const moreTabIconPaths = ['M6.5 12h.01', 'M12 12h.01', 'M17.5 12h.01']
 
 const isLoggedIn = computed(() => Boolean(token.value))
 const articlePages = computed(() => Math.max(1, Math.ceil(articleTotal.value / articleQuery.value.page_size)))
@@ -705,7 +706,11 @@ onMounted(() => {
               :class="{ active: activeTab === tab.key }"
               @click="setActiveTab(tab.key)"
             >
-              <span class="mobile-tab-icon">{{ tab.icon }}</span>
+              <span class="mobile-tab-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path v-for="(path, index) in tab.iconPaths" :key="`${tab.key}-${index}`" :d="path" />
+                </svg>
+              </span>
               <span class="mobile-tab-copy">
                 <strong>{{ tab.label }}</strong>
                 <small>{{ tab.hint }}</small>
@@ -723,11 +728,19 @@ onMounted(() => {
           :class="{ active: mobileNavActiveKey === tab.key }"
           @click="setActiveTab(tab.key)"
         >
-          <span class="mobile-tab-icon">{{ tab.icon }}</span>
+          <span class="mobile-tab-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path v-for="(path, index) in tab.iconPaths" :key="`${tab.key}-mobile-${index}`" :d="path" />
+            </svg>
+          </span>
           <span class="mobile-tab-label">{{ tab.mobileLabel }}</span>
         </button>
         <button :class="{ active: mobileNavActiveKey === 'more' || mobileMenuOpen }" @click="toggleMobileMenu">
-          <span class="mobile-tab-icon">更</span>
+          <span class="mobile-tab-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path v-for="(path, index) in moreTabIconPaths" :key="`more-${index}`" :d="path" />
+            </svg>
+          </span>
           <span class="mobile-tab-label">更多</span>
         </button>
       </nav>
@@ -948,6 +961,13 @@ onMounted(() => {
   color: #23374c;
 }
 
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 116px;
+}
+
 .mobile-tabbar,
 .mobile-sheet-grid,
 .mobile-sheet-card,
@@ -986,6 +1006,17 @@ onMounted(() => {
   font-weight: 700;
   background: rgba(32, 48, 68, 0.08);
   color: #23374c;
+  transition: transform 0.22s ease, background 0.22s ease, color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.mobile-tab-icon svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .mobile-tab-label {
@@ -1036,6 +1067,7 @@ onMounted(() => {
 .mobile-tabbar button.active .mobile-tab-icon {
   background: rgba(255, 255, 255, 0.16);
   color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .mobile-sheet-card.active .mobile-tab-copy small {
@@ -1407,6 +1439,7 @@ button:disabled {
   .page-shell {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
   }
 
   .sidebar {
@@ -1468,15 +1501,40 @@ button:disabled {
   .content-area {
     gap: 12px;
     padding: 0 12px calc(112px + env(safe-area-inset-bottom));
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .content-area > * {
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .mobile-header {
     display: flex;
+    align-items: center;
+    padding: 18px;
+    border-radius: 24px;
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(242, 247, 252, 0.78)),
+      radial-gradient(circle at top right, rgba(87, 126, 168, 0.14), transparent 38%);
   }
 
   .mobile-header .ghost {
     width: auto;
     min-width: 76px;
+    padding-inline: 16px;
+    align-self: flex-start;
+  }
+
+  .mobile-header .eyebrow,
+  .mobile-header .muted,
+  .mobile-header .success-text {
+    margin: 0;
+  }
+
+  .mobile-header h2 {
+    font-size: 1.85rem;
   }
 
   .mobile-tabbar {
@@ -1486,10 +1544,10 @@ button:disabled {
     position: fixed;
     left: 12px;
     right: 12px;
-    bottom: calc(12px + env(safe-area-inset-bottom));
+    bottom: 10px;
     z-index: 40;
-    padding: 10px;
-    border-radius: 24px;
+    padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+    border-radius: 28px;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(242, 247, 252, 0.88)),
       linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(180, 208, 232, 0.1));
@@ -1511,10 +1569,25 @@ button:disabled {
     background: transparent;
     color: #526272;
     box-shadow: none;
+    position: relative;
   }
 
   .mobile-tabbar button:hover {
     transform: none;
+  }
+
+  .mobile-tabbar button::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    width: 4px;
+    height: 4px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px) scale(0.4);
+    transition: opacity 0.22s ease, transform 0.22s ease;
   }
 
   .mobile-tabbar button.active {
@@ -1523,6 +1596,16 @@ button:disabled {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.22),
       0 12px 20px rgba(34, 48, 64, 0.18);
+    transform: translateY(-1px);
+  }
+
+  .mobile-tabbar button.active::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+
+  .mobile-tabbar button.active .mobile-tab-icon {
+    transform: translateY(-1px) scale(1.04);
   }
 
   .mobile-sheet-backdrop {
@@ -1545,6 +1628,9 @@ button:disabled {
     border-radius: 24px;
     max-height: calc(100vh - 160px);
     overflow: auto;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(244, 248, 252, 0.92)),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(180, 208, 232, 0.08));
   }
 
   .mobile-sheet-head .ghost {
