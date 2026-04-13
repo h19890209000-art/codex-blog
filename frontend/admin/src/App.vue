@@ -8,6 +8,7 @@ const activeTab = ref('dashboard')
 const loading = ref(false)
 const aiLoading = ref(false)
 const agentLoading = ref(false)
+const systemConfigSaving = ref(false)
 const loginError = ref('')
 const systemMessage = ref('')
 
@@ -20,6 +21,7 @@ const tags = ref([])
 const articles = ref([])
 const comments = ref([])
 const users = ref([])
+const systemConfigItems = ref([])
 const articleTotal = ref(0)
 const commentTotal = ref(0)
 const userTotal = ref(0)
@@ -236,13 +238,14 @@ async function loadAll() {
   if (!token.value) return
   loading.value = true
   try {
-    const [me, dash, categoryData, tagData, providerData, syncData] = await Promise.all([
+    const [me, dash, categoryData, tagData, providerData, syncData, configData] = await Promise.all([
       request('/me', { headers: authHeaders() }),
       request('/dashboard', { headers: authHeaders() }),
       request('/categories', { headers: authHeaders() }),
       request('/tags', { headers: authHeaders() }),
       request('/ai/providers', { headers: authHeaders() }),
-      request('/sync/oss/status', { headers: authHeaders() })
+      request('/sync/oss/status', { headers: authHeaders() }),
+      request('/system-configs', { headers: authHeaders() })
     ])
     user.value = me.user
     dashboard.value = dash
@@ -250,6 +253,7 @@ async function loadAll() {
     tags.value = tagData || []
     providers.value = providerData.providers || []
     syncStatus.value = syncData
+    systemConfigItems.value = (configData || []).map((item) => ({ ...item, value: item.value ?? '' }))
     await Promise.all([loadArticles(), loadComments(), loadUsers()])
   } finally {
     loading.value = false
@@ -347,6 +351,26 @@ async function changePassword() {
   await request('/auth/change-password', { method: 'POST', headers: authHeaders(), body: JSON.stringify(passwordForm.value) })
   passwordForm.value = { old_password: '', new_password: '' }
   showMessage('密码修改成功')
+}
+
+async function saveSystemConfigs() {
+  systemConfigSaving.value = true
+  try {
+    const data = await request('/system-configs', {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        items: systemConfigItems.value.map((item) => ({
+          key: item.key,
+          value: item.value ?? ''
+        }))
+      })
+    })
+    systemConfigItems.value = (data || []).map((item) => ({ ...item, value: item.value ?? '' }))
+    showMessage('系统配置已保存')
+  } finally {
+    systemConfigSaving.value = false
+  }
 }
 
 async function runAITool(path, payload) {
@@ -685,6 +709,26 @@ onMounted(() => {
           <article class="panel-card">
             <div class="section-head"><div><h2>OSS 同步</h2><p class="muted">每小时自动同步一次，也支持手动立即同步。</p></div><button class="primary" :disabled="loading || syncStatus?.is_running" @click="runSync">{{ syncStatus?.is_running ? '同步中...' : '立即同步' }}</button></div>
             <div class="stack"><p>Bucket：{{ syncStatus?.bucket || '-' }}</p><p>Endpoint：{{ syncStatus?.endpoint || '-' }}</p><p>Prefix：{{ syncStatus?.prefix || '-' }}</p><p>同步间隔：{{ syncStatus?.interval_minutes || 60 }} 分钟</p><p>最近结果：{{ syncStatus?.last_result?.message || '还没有执行过同步任务。' }}</p></div>
+          </article>
+          <article class="panel-card full-width">
+            <div class="section-head">
+              <div>
+                <h2>系统配置</h2>
+                <p class="muted">这里可以直接修改读者端首页文案，保存后前台会优先读取数据库配置。</p>
+              </div>
+              <button class="primary" :disabled="systemConfigSaving" @click="saveSystemConfigs">{{ systemConfigSaving ? '保存中...' : '保存配置' }}</button>
+            </div>
+            <div class="config-grid">
+              <div v-for="item in systemConfigItems" :key="item.key" class="config-card" :class="{ wide: item.input_type === 'textarea' }">
+                <label class="field">
+                  <span>{{ item.name }}</span>
+                  <textarea v-if="item.input_type === 'textarea'" v-model="item.value" rows="4"></textarea>
+                  <input v-else v-model="item.value" type="text" />
+                </label>
+                <p class="muted config-meta">{{ item.description }}</p>
+                <p class="muted config-key">Key: {{ item.key }}</p>
+              </div>
+            </div>
           </article>
         </section>
       </section>
@@ -1106,6 +1150,37 @@ onMounted(() => {
   grid-column: 1 / -1;
 }
 
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.config-card {
+  padding: 16px;
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.38)),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(170, 203, 234, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.54);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.76),
+    0 16px 28px rgba(45, 67, 92, 0.06);
+}
+
+.config-card.wide {
+  grid-column: 1 / -1;
+}
+
+.config-meta,
+.config-key {
+  margin: 0;
+}
+
+.config-key {
+  font-size: 12px;
+}
+
 .section-head {
   display: flex;
   justify-content: space-between;
@@ -1425,6 +1500,7 @@ button:disabled {
   .page-shell,
   .login-layout,
   .two-column,
+  .config-grid,
   .stats-grid,
   .inline-grid,
   .button-grid,

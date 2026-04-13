@@ -17,6 +17,7 @@ type PublicController struct {
 	portalService        *service.PortalService
 	aiService            *service.AIService
 	dailyBriefingService *service.DailyBriefingService
+	systemConfigService  *service.SystemConfigService
 }
 
 func NewPublicController(
@@ -24,12 +25,14 @@ func NewPublicController(
 	portalService *service.PortalService,
 	aiService *service.AIService,
 	dailyBriefingService *service.DailyBriefingService,
+	systemConfigService *service.SystemConfigService,
 ) *PublicController {
 	return &PublicController{
 		articleService:       articleService,
 		portalService:        portalService,
 		aiService:            aiService,
 		dailyBriefingService: dailyBriefingService,
+		systemConfigService:  systemConfigService,
 	}
 }
 
@@ -119,6 +122,16 @@ func (controller *PublicController) ListArchives(ctx *gin.Context) {
 
 func (controller *PublicController) ListDailyBriefings(ctx *gin.Context) {
 	result, err := controller.dailyBriefingService.ListPublic(ctx.Query("date"))
+	if err != nil {
+		response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(ctx, result)
+}
+
+func (controller *PublicController) ListSystemConfigs(ctx *gin.Context) {
+	result, err := controller.systemConfigService.PublicMap()
 	if err != nil {
 		response.Error(ctx, http.StatusInternalServerError, err.Error())
 		return

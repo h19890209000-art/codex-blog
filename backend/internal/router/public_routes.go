@@ -18,6 +18,7 @@ func registerPublicRoutes(engine *gin.Engine, publicController *controller.Publi
 		publicGroup.GET("/tags", publicController.ListTags)
 		publicGroup.GET("/archives", publicController.ListArchives)
 		publicGroup.GET("/daily-briefings", publicController.ListDailyBriefings)
+		publicGroup.GET("/system-configs", publicController.ListSystemConfigs)
 		publicGroup.GET("/articles/:id/comments", publicController.ListComments)
 		publicGroup.POST("/articles/:id/comments", publicController.CreateComment)
 		publicGroup.POST("/ai/analyze-title", publicController.AnalyzeTitle)

@@ -17,6 +17,20 @@ const siteQuestion = ref('')
 const siteAnswer = ref('')
 const loading = ref(false)
 const shareNotice = ref('')
+const defaultPageCopy = {
+  reader_home_title: 'AI 智能博客读者端',
+  reader_home_intro: '这里除了文章列表，现在还新增了每日简讯和顶部快速内容切换。点分类或标签后，顶部会立即切成对应内容，不用再往下翻。',
+  reader_home_search_placeholder: '搜索文章标题或正文',
+  reader_home_search_button_label: '搜索文章',
+  reader_home_clear_button_label: '清空筛选',
+  reader_home_about_title: '博客简介',
+  reader_home_about_intro: '这个读者端包含文章、分类、标签、全站问答和每日简讯。现在点左侧筛选后，主内容区会优先展示对应结果。',
+  reader_home_site_qa_title: '全站知识问答',
+  reader_home_site_qa_placeholder: '例如：这个博客里有哪些 Go 入门内容？',
+  reader_home_site_qa_button_label: '提问全站 AI',
+  reader_home_article_list_title: '文章列表'
+}
+const pageCopy = ref({ ...defaultPageCopy })
 
 const filteredArticles = computed(() => {
   return articles.value.filter((article) => {
@@ -63,6 +77,15 @@ async function loadArticles() {
     articles.value = await request(`/articles?keyword=${encodeURIComponent(keyword)}`)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadSystemConfigs() {
+  try {
+    const data = await request('/system-configs')
+    pageCopy.value = { ...defaultPageCopy, ...(data || {}) }
+  } catch (error) {
+    pageCopy.value = { ...defaultPageCopy }
   }
 }
 
@@ -156,7 +179,7 @@ function clearFilters() {
 }
 
 onMounted(async () => {
-  await Promise.all([loadSidebarData(), loadArticles()])
+  await Promise.all([loadSidebarData(), loadArticles(), loadSystemConfigs()])
 })
 </script>
 
@@ -172,16 +195,14 @@ onMounted(async () => {
     <section class="hero glass hero-stable">
       <div>
         <p class="eyebrow">Reader Experience</p>
-        <h1>AI 智能博客读者端</h1>
-        <p class="intro">
-          这里除了文章列表，现在还新增了每日简讯和顶部快速内容切换。点分类或标签后，顶部会立即切成对应内容，不用再往下翻。
-        </p>
+        <h1>{{ pageCopy.reader_home_title }}</h1>
+        <p class="intro">{{ pageCopy.reader_home_intro }}</p>
       </div>
 
       <div class="hero-actions">
-        <input v-model="searchKeyword" type="text" placeholder="搜索文章标题或正文" />
-        <button class="toolbar-button toolbar-button--primary" @click="loadArticles">搜索文章</button>
-        <button class="toolbar-button toolbar-button--soft" @click="clearFilters">清空筛选</button>
+        <input v-model="searchKeyword" type="text" :placeholder="pageCopy.reader_home_search_placeholder" />
+        <button class="toolbar-button toolbar-button--primary" @click="loadArticles">{{ pageCopy.reader_home_search_button_label }}</button>
+        <button class="toolbar-button toolbar-button--soft" @click="clearFilters">{{ pageCopy.reader_home_clear_button_label }}</button>
         <p v-if="shareNotice" class="share-notice">{{ shareNotice }}</p>
       </div>
     </section>
@@ -190,10 +211,8 @@ onMounted(async () => {
       <aside class="sidebar">
         <article class="glass panel">
           <p class="eyebrow">About</p>
-          <h2>博客简介</h2>
-          <p class="intro-small">
-            这个读者端包含文章、分类、标签、全站问答和每日简讯。现在点左侧筛选后，主内容区会优先展示对应结果。
-          </p>
+          <h2>{{ pageCopy.reader_home_about_title }}</h2>
+          <p class="intro-small">{{ pageCopy.reader_home_about_intro }}</p>
         </article>
 
         <article class="glass panel">
@@ -240,9 +259,9 @@ onMounted(async () => {
 
         <article class="glass panel">
           <p class="eyebrow">Site QA</p>
-          <h2>全站知识问答</h2>
-          <textarea v-model="siteQuestion" rows="4" placeholder="例如：这个博客里有哪些 Go 入门内容？"></textarea>
-          <button class="toolbar-button toolbar-button--primary" @click="askSiteQuestion">提问全站 AI</button>
+          <h2>{{ pageCopy.reader_home_site_qa_title }}</h2>
+          <textarea v-model="siteQuestion" rows="4" :placeholder="pageCopy.reader_home_site_qa_placeholder"></textarea>
+          <button class="toolbar-button toolbar-button--primary" @click="askSiteQuestion">{{ pageCopy.reader_home_site_qa_button_label }}</button>
           <pre class="result">{{ siteAnswer }}</pre>
         </article>
       </aside>
@@ -298,7 +317,7 @@ onMounted(async () => {
           <div class="section-head">
             <div>
               <p class="eyebrow">Article List</p>
-              <h2>文章列表</h2>
+              <h2>{{ pageCopy.reader_home_article_list_title }}</h2>
             </div>
             <p class="hint">
               {{ loading ? '正在加载文章...' : `当前共 ${filteredArticles.length} 篇文章` }}

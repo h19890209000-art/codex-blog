@@ -47,6 +47,7 @@ func NewApp() (*App, error) {
 	categoryRepo := repository.NewGormCategoryRepository(db)
 	tagRepo := repository.NewGormTagRepository(db)
 	dailyBriefingRepo := repository.NewGormDailyBriefingRepository(db)
+	systemConfigRepo := repository.NewGormSystemConfigRepository(db)
 
 	// 第四步：创建 AI Provider 注册表。
 	// 这里会把 GLM、MiniMax、小米、OpenAI、Ollama 这些厂商接起来。
@@ -63,6 +64,7 @@ func NewApp() (*App, error) {
 	portalService := service.NewPortalService(articleRepo, categoryRepo, tagRepo, commentRepo)
 	aiService := service.NewAIService(providerRegistry, articleRepo, commentRepo)
 	dailyBriefingService := service.NewDailyBriefingService(dailyBriefingRepo)
+	systemConfigService := service.NewSystemConfigService(systemConfigRepo)
 	ossSyncService, err := service.NewOSSSyncService(appConfig, articleRepo, categoryRepo, tagRepo)
 	if err != nil {
 		return nil, err
@@ -70,8 +72,8 @@ func NewApp() (*App, error) {
 
 	// 第六步：创建 Controller。
 	// Controller 负责接收 HTTP 请求，然后把请求交给 Service。
-	publicController := controller.NewPublicController(articleService, portalService, aiService, dailyBriefingService)
-	adminController := controller.NewAdminController(authService, adminService, aiService, providerRegistry, ossSyncService, dailyBriefingService)
+	publicController := controller.NewPublicController(articleService, portalService, aiService, dailyBriefingService, systemConfigService)
+	adminController := controller.NewAdminController(authService, adminService, aiService, providerRegistry, ossSyncService, dailyBriefingService, systemConfigService)
 
 	// 第七步：创建 Gin 引擎。
 	engine := gin.Default()

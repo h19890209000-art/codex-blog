@@ -98,3 +98,12 @@ type FetchDailyBriefingRequest struct {
 	Date  string `json:"date"`
 	Limit int    `json:"limit"`
 }
+
+type SaveSystemConfigsRequest struct {
+	Items []SystemConfigItem `json:"items"`
+}
+
+type SystemConfigItem struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}

@@ -21,6 +21,7 @@ type AdminController struct {
 	providers            *service.ProviderRegistry
 	syncService          *service.OSSSyncService
 	dailyBriefingService *service.DailyBriefingService
+	systemConfigService  *service.SystemConfigService
 }
 
 // NewAdminController 创建后台控制器。
@@ -31,6 +32,7 @@ func NewAdminController(
 	providers *service.ProviderRegistry,
 	syncService *service.OSSSyncService,
 	dailyBriefingService *service.DailyBriefingService,
+	systemConfigService *service.SystemConfigService,
 ) *AdminController {
 	return &AdminController{
 		authService:          authService,
@@ -39,6 +41,7 @@ func NewAdminController(
 		providers:            providers,
 		syncService:          syncService,
 		dailyBriefingService: dailyBriefingService,
+		systemConfigService:  systemConfigService,
 	}
 }
 
@@ -406,6 +409,40 @@ func (controller *AdminController) ProviderOverview(ctx *gin.Context) {
 // OSSSyncStatus 返回 OSS 同步状态。
 func (controller *AdminController) OSSSyncStatus(ctx *gin.Context) {
 	response.Success(ctx, controller.syncService.Status())
+}
+
+func (controller *AdminController) ListSystemConfigs(ctx *gin.Context) {
+	result, err := controller.systemConfigService.ListAdmin()
+	if err != nil {
+		response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(ctx, result)
+}
+
+func (controller *AdminController) SaveSystemConfigs(ctx *gin.Context) {
+	var request dto.SaveSystemConfigsRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid request payload")
+		return
+	}
+
+	inputs := make([]service.SystemConfigInput, 0, len(request.Items))
+	for _, item := range request.Items {
+		inputs = append(inputs, service.SystemConfigInput{
+			Key:   item.Key,
+			Value: item.Value,
+		})
+	}
+
+	result, err := controller.systemConfigService.Save(inputs)
+	if err != nil {
+		response.Error(ctx, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	response.Success(ctx, result)
 }
 
 // RunOSSSync 手动触发一次 OSS 同步。

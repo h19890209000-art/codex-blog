@@ -34,6 +34,8 @@ func registerAdminProtectedRoutes(engine *gin.Engine, appConfig config.AppConfig
 		adminProtectedGroup.POST("/auth/change-password", adminController.ChangePassword)
 
 		adminProtectedGroup.GET("/dashboard", adminController.Dashboard)
+		adminProtectedGroup.GET("/system-configs", adminController.ListSystemConfigs)
+		adminProtectedGroup.PUT("/system-configs", adminController.SaveSystemConfigs)
 
 		adminProtectedGroup.GET("/articles", adminController.ListArticles)
 		adminProtectedGroup.POST("/articles", adminController.CreateArticle)

@@ -5,6 +5,7 @@ import (
 
 	"ai-blog/backend/internal/config"
 	"ai-blog/backend/internal/model"
+	"ai-blog/backend/internal/support"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
@@ -70,6 +71,7 @@ func InitDatabase(cfg config.AppConfig) (*gorm.DB, error) {
 		&model.ArticleTag{},
 		&model.Comment{},
 		&model.DailyBriefing{},
+		&model.SystemConfig{},
 	); err != nil {
 		return nil, err
 	}
@@ -81,6 +83,10 @@ func InitDatabase(cfg config.AppConfig) (*gorm.DB, error) {
 
 	// 确保第一次打开系统时，至少有一篇演示文章。
 	if err := seedDefaultContent(appDB); err != nil {
+		return nil, err
+	}
+
+	if err := seedDefaultSystemConfigs(appDB); err != nil {
 		return nil, err
 	}
 
@@ -167,4 +173,29 @@ func seedDefaultContent(db *gorm.DB) error {
 	}
 
 	return db.Create(&comment).Error
+}
+
+func seedDefaultSystemConfigs(db *gorm.DB) error {
+	defaults := support.DefaultSystemConfigDefinitions()
+	if len(defaults) == 0 {
+		return nil
+	}
+
+	for _, item := range defaults {
+		config := model.SystemConfig{
+			Key:         item.Key,
+			Group:       item.Group,
+			Name:        item.Name,
+			Value:       item.Value,
+			InputType:   item.InputType,
+			Description: item.Description,
+			IsPublic:    item.IsPublic,
+		}
+
+		if err := db.Where("`key` = ?", item.Key).FirstOrCreate(&config).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
