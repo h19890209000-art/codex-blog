@@ -6,6 +6,8 @@
 - AI Provider 已支持 `GLM`、`MiniMax`、`小米`、`OpenAI 兼容接口`、`Ollama`
 - 前端拆成 `reader` 和 `admin` 两个 Vue 应用
 - 代码尽量按 Go 新手友好的方式组织
+- 读者端首页文案支持后台“系统配置”动态维护
+- 支持使用 `scripts/package-release.ps1` 一键打包发布包
 
 ## 目录说明
 
@@ -51,6 +53,13 @@ npm run dev
 cd .\frontend\admin
 npm install
 npm run dev
+```
+
+### 一键打包
+
+```powershell
+cd .
+powershell -ExecutionPolicy Bypass -File .\scripts\package-release.ps1
 ```
 
 ## 已实现接口

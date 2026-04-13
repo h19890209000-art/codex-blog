@@ -1,36 +1,21 @@
 # codex-blog 部署文档
 
-## 1. 项目结构
-
-本项目当前包含 4 个主要部分：
+## 1. 当前项目组成
 
 - `backend`：Go + Gin API 服务，默认端口 `8080`
 - `frontend/reader`：读者端，Vite + Vue 3
-- `frontend/admin`：管理后台，Vite + Vue 3
+- `frontend/admin`：管理后台，Vite + Vue 3，部署路径固定为 `/admin/`
 - `scripts/fetch-daily-briefings.ps1`：每日简讯抓取脚本
+- `scripts/package-release.ps1`：Windows 一键打包脚本
 
-当前已经集成的关键能力：
+## 2. 这版新增内容
 
-- 文章、分类、标签、评论、用户管理
-- AI 能力路由
-- 读者端“每日简讯”
-- 后台“每日简讯管理”
-- 自动抓取每日 10 条全球 AI 资讯
-
-## 2. 推荐部署方式
-
-推荐使用下面这套结构：
-
-- 后端二进制部署为常驻服务
-- MySQL 单独部署
-- 读者端静态文件由 Nginx 托管在 `/`
-- 管理端静态文件由 Nginx 托管在 `/admin/`
-- Nginx 反向代理 `/api/` 和 `/health`
-- 每日简讯抓取脚本通过 Windows 计划任务或 Linux `cron` 定时执行
+- 读者端首页标题、简介、搜索按钮等文案已支持后台配置
+- 后台新增“系统设置 -> 系统配置”模块
+- 后端启动时会自动迁移 `system_configs` 表
+- 远程数据库第一次启动新版本后，会自动补齐默认系统配置
 
 ## 3. 环境要求
-
-建议版本：
 
 - Go `1.23.3` 或更高
 - Node.js `20.x`
@@ -38,27 +23,25 @@
 - MySQL `8.0+`
 - Nginx `1.20+`
 
-Windows 本地开发建议：
+Windows 本地建议：
 
 - PowerShell 5.1 或 PowerShell 7
 - 已安装 `go`、`node`、`npm`
 
-## 4. 配置文件说明
+## 4. 配置文件
 
-后端配置文件路径：
+后端配置文件位置：
 
 - 示例文件：`backend/configs/config.example.json`
-- 本地实际配置：`backend/configs/config.local.json`
+- 实际运行文件：`backend/configs/config.local.json`
 
-启动时如果没有显式设置 `APP_CONFIG`，后端会默认读取：
+如果没有显式设置 `APP_CONFIG`，后端默认读取：
 
 ```text
 backend/configs/config.local.json
 ```
 
-### 4.1 必改项
-
-至少要检查这些字段：
+至少需要确认这些字段：
 
 - `database.host`
 - `database.port`
@@ -71,25 +54,11 @@ backend/configs/config.local.json
 - `oss.access_key_id`
 - `oss.access_key_secret`
 
-### 4.2 小米 MiMo 配置
+重要说明：
 
-本项目里小米 Provider 现在已经按可用方式接通，建议这样配置：
-
-```json
-"xiaomi": {
-  "type": "xiaomi",
-  "base_url": "https://api.xiaomimimo.com/v1",
-  "api_key": "replace-with-your-xiaomi-key",
-  "model": "mimo-v2-pro"
-}
-```
-
-补充说明：
-
-- `base_url` 必须带上 `/v1`
-- 模型 `mimo-v2-pro` 可用于正常对话
-- 本项目的“评论审核”会自动走兼容封装，并优先使用 `mimo-v2-flash` 输出短 JSON 结果
-- 小米 MiMo 当前不能按标准 OpenAI 方式直接调用 `/moderations`，所以项目里做了审核兼容层，不要再把它改回裸 `/moderations`
+- 不要把 `config.local.json` 提交到 Git
+- 不要把真实密钥写进公开文档
+- 如果密钥已经暴露，先旋转再部署
 
 ## 5. 数据库初始化
 
@@ -99,9 +68,15 @@ backend/configs/config.local.json
 CREATE DATABASE ai_blog DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 ```
 
-本项目使用 GORM 自动迁移，后端首次启动时会自动建表和补表结构。
+当前项目使用 GORM 自动迁移。后端首次启动时会自动创建或更新这些表：
 
-## 6. 本地开发启动
+- 用户、文章、分类、标签、评论相关表
+- 每日简讯表
+- `system_configs` 系统配置表
+
+如果你是从旧版本升级上来，只要正常启动一次后端即可，不需要手工建 `system_configs`。
+
+## 6. 本地启动
 
 ### 6.1 启动后端
 
@@ -128,44 +103,44 @@ npm run dev
 
 默认开发地址：
 
-- 读者端：`http://localhost:5173`
-- 管理端：`http://localhost:5174`
-- 后端：`http://localhost:8080`
+- 读者端：`http://127.0.0.1:5173/`
+- 管理后台：`http://127.0.0.1:5174/admin/`
+- 后端：`http://127.0.0.1:8080/`
 
-## 7. 生产构建
+## 7. 一键打包
 
-### 7.1 构建后端
+Windows 下可以直接执行：
 
-```bash
-cd /opt/codex-blog/backend
-go mod tidy
-go build -o /opt/codex-blog/bin/codex-blog-server ./cmd/server
-go build -o /opt/codex-blog/bin/dailybriefing-fetcher ./cmd/dailybriefing_fetcher
+```powershell
+cd D:\codex-blog
+powershell -ExecutionPolicy Bypass -File .\scripts\package-release.ps1
 ```
 
-### 7.2 构建读者端
+如果你想指定版本号：
 
-```bash
-cd /opt/codex-blog/frontend/reader
-npm install
-npm run build
+```powershell
+cd D:\codex-blog
+powershell -ExecutionPolicy Bypass -File .\scripts\package-release.ps1 -Version 20260413
 ```
 
-### 7.3 构建管理端
+打包后会在 `release/` 目录下生成：
 
-```bash
-cd /opt/codex-blog/frontend/admin
-npm install
-npm run build
-```
+- 一个发布目录：`release/codex-blog-版本号`
+- 一个压缩包：`release/codex-blog-版本号.zip`
 
-说明：
+发布包包含：
 
-- 管理端已经配置为 `base: '/admin/'`
-- 因此同域名子路径部署时，静态资源会从 `/admin/assets/...` 加载
-- 如果你改成后台独立子域名部署，可以再把 `base` 改回 `/`
+- `backend/codex-blog-server.exe`
+- `backend/dailybriefing-fetcher.exe`
+- `backend/configs/config.example.json`
+- `frontend/reader/dist`
+- `frontend/admin/dist`
+- `scripts/fetch-daily-briefings.ps1`
+- `docs/DEPLOYMENT.md`
+- `docs/README.md`
+- `database/ai_blog.sql`
 
-## 8. Linux 服务器部署
+## 8. Linux 生产部署
 
 以下示例基于 Ubuntu 22.04。
 
@@ -220,14 +195,35 @@ cp ./configs/config.example.json ./configs/config.local.json
 
 重点确认：
 
-- 数据库连接是否正确
-- `auth.token_secret` 是否替换为随机长串
-- 管理员默认密码是否已修改
-- 小米 MiMo、MiniMax、GLM、OpenAI、OSS 的密钥是否正确
+- 数据库连接正确
+- `auth.token_secret` 已替换为随机长串
+- 后台默认密码已修改
+- AI 与 OSS 的密钥正确
 
-### 8.4 后端 systemd 服务
+### 8.4 构建后端
 
-创建服务文件：
+```bash
+cd /opt/codex-blog/backend
+go mod tidy
+go build -o /opt/codex-blog/bin/codex-blog-server ./cmd/server
+go build -o /opt/codex-blog/bin/dailybriefing-fetcher ./cmd/dailybriefing_fetcher
+```
+
+### 8.5 构建前端
+
+```bash
+cd /opt/codex-blog/frontend/reader
+npm install
+npm run build
+
+cd /opt/codex-blog/frontend/admin
+npm install
+npm run build
+```
+
+## 9. systemd 配置
+
+创建后端服务：
 
 ```bash
 sudo tee /etc/systemd/system/codex-blog-backend.service > /dev/null << 'EOF'
@@ -258,15 +254,15 @@ sudo systemctl start codex-blog-backend
 sudo systemctl status codex-blog-backend
 ```
 
-## 9. Nginx 配置
+## 10. Nginx 配置
 
 推荐同域名部署：
 
 - 读者端：`https://your-domain.com/`
-- 管理端：`https://your-domain.com/admin/`
+- 后台：`https://your-domain.com/admin/`
 - API：`https://your-domain.com/api/...`
 
-Nginx 配置示例：
+配置示例：
 
 ```nginx
 server {
@@ -319,13 +315,11 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-如果你要上 HTTPS，建议再接上 Let's Encrypt 或你自己的证书。
+如果你需要 HTTPS，再接 Let’s Encrypt 或你自己的证书。
 
-## 10. Windows 服务器部署
+## 11. Windows 服务器部署
 
-如果你准备直接部署在 Windows 机器上，建议这样做：
-
-### 10.1 构建后端
+### 11.1 构建后端
 
 ```powershell
 cd D:\codex-blog\backend
@@ -333,22 +327,7 @@ go build -o D:\codex-blog\bin\codex-blog-server.exe .\cmd\server
 go build -o D:\codex-blog\bin\dailybriefing-fetcher.exe .\cmd\dailybriefing_fetcher
 ```
 
-### 10.2 启动后端
-
-开发环境临时启动：
-
-```powershell
-cd D:\codex-blog\backend
-D:\codex-blog\bin\codex-blog-server.exe
-```
-
-正式环境建议：
-
-- 使用 NSSM、WinSW 或任务计划程序将 `codex-blog-server.exe` 托管为常驻服务
-- 工作目录要指向 `D:\codex-blog\backend`
-- 保证 `backend/configs/config.local.json` 可读
-
-### 10.3 构建前端
+### 11.2 构建前端
 
 ```powershell
 cd D:\codex-blog\frontend\reader
@@ -360,76 +339,59 @@ npm install
 npm run build
 ```
 
-然后把：
+### 11.3 启动建议
 
-- `frontend/reader/dist`
-- `frontend/admin/dist`
+- 后端建议用 NSSM、WinSW 或计划任务托管
+- 工作目录指向 `D:\codex-blog\backend`
+- 静态文件可交给 IIS 或 Nginx for Windows
 
-交给 IIS、Nginx for Windows 或其他静态文件服务托管。
+## 12. 每日简讯抓取
 
-## 11. 每日简讯自动抓取
-
-### 11.1 手动执行
+### 12.1 手动执行
 
 Windows：
 
 ```powershell
 cd D:\codex-blog
-.\scripts\fetch-daily-briefings.ps1 -date 2026-04-12 -limit 10
+.\scripts\fetch-daily-briefings.ps1 -date 2026-04-13 -limit 10
 ```
 
 Linux：
 
 ```bash
 cd /opt/codex-blog/backend
-/opt/codex-blog/bin/dailybriefing-fetcher -date 2026-04-12 -limit 10
+/opt/codex-blog/bin/dailybriefing-fetcher -date 2026-04-13 -limit 10
 ```
 
-不传 `-date` 时，会按当天日期抓取。
-
-### 11.2 Windows 计划任务
-
-可以设置一个每天早上 08:30 执行的任务，命令示例：
-
-```powershell
-powershell.exe -ExecutionPolicy Bypass -File D:\codex-blog\scripts\fetch-daily-briefings.ps1 -limit 10
-```
-
-建议：
-
-- 起始目录设为 `D:\codex-blog`
-- 失败后允许重试
-- 日志重定向到单独文件
-
-### 11.3 Linux cron
-
-每天 08:30 自动抓取：
+### 12.2 Linux cron
 
 ```cron
 30 8 * * * cd /opt/codex-blog/backend && /opt/codex-blog/bin/dailybriefing-fetcher -limit 10 >> /var/log/codex-blog-dailybriefing.log 2>&1
 ```
 
-## 12. 部署完成后的检查项
+## 13. 部署后的检查项
 
-至少检查下面这些地址和能力：
+至少检查这些地址和能力：
 
-- `GET /health` 返回正常
-- 读者端首页可打开
-- 管理后台可登录
-- 文章列表、分类、标签加载正常
+- `GET /health` 正常返回
+- 读者端首页可以打开
+- 管理后台可以登录
+- `GET /api/public/system-configs` 返回系统配置
+- 后台“系统设置 -> 系统配置”可以看到默认文案
+- 修改一条系统配置并保存后，读者端刷新能看到变更
 - 每日简讯列表可见
-- 后台“自动抓取”能成功执行
-- 评论审核返回 `provider=xiaomi`
+- OSS 同步状态可见
 
-推荐自检命令：
+推荐检查命令：
 
 ```bash
 curl http://127.0.0.1:8080/health
 curl http://127.0.0.1:8080/api/public/articles
 curl http://127.0.0.1:8080/api/public/daily-briefings
+curl http://127.0.0.1:8080/api/public/system-configs
 ```
 
-## 13. 更新流程
+## 14. 更新流程
 
 ```bash
 cd /opt/codex-blog
@@ -451,53 +413,43 @@ npm run build
 sudo systemctl reload nginx
 ```
 
-## 14. 常见问题
+升级到当前版本时额外注意：
 
-### 14.1 管理后台能打开但样式或资源 404
+- 后端至少要重启一次，让 `system_configs` 自动迁移生效
+- 如果用了旧版管理端静态文件，记得重新覆盖 `frontend/admin/dist`
+- 读者端首页文案不再只写死在前端，优先读数据库
 
-先检查两件事：
+## 15. 常见问题
 
-- `frontend/admin/vite.config.js` 是否包含 `base: '/admin/'`
-- Nginx 是否同时配置了 `location /admin/` 和 `location /admin/assets/`
-
-### 14.2 小米 MiMo 调用 404
-
-通常是下面两个原因：
-
-- `base_url` 没带 `/v1`
-- 把审核错误地走到了 `/moderations`
-
-本项目现在的正确方式是：
-
-- 对话走 `https://api.xiaomimimo.com/v1/chat/completions`
-- 审核走项目内兼容层，不直接请求 `/moderations`
-
-### 14.3 每日简讯抓取失败
+### 15.1 后台能打开但资源 404
 
 优先检查：
 
-- 服务器是否能访问外部 RSS
-- MySQL 是否正常
-- 后端日志是否有超时
-- 定时任务工作目录是否正确
+- `frontend/admin/vite.config.js` 是否保留 `base: '/admin/'`
+- Nginx 是否同时配置了 `/admin/` 和 `/admin/assets/`
 
-### 14.4 配置文件泄露
+### 15.2 后台报 `[vue/compiler-sfc] Missing semicolon`
 
-强烈建议：
+这通常不是接口问题，而是前端开发服务缓存了旧的异常文件状态。处理方式：
 
-- 不要把 `config.local.json` 提交到 Git
-- 不要把真实 API Key 写进文档
-- 如果密钥曾经在聊天、截图或公开仓库里暴露，立即旋转
+- 先确认 `frontend/admin/src/App.vue` 本身是正常文件
+- 重新执行一次 `npm run build`
+- 重启管理端开发服务
+- 浏览器使用 `Ctrl + F5` 强刷
 
-## 15. 当前实测结论
+### 15.3 系统配置修改后前台没变化
 
-这次已经在项目内实测通过的内容：
+优先检查：
 
-- 后端可正常编译和启动
-- 管理端 `/admin/` 子路径构建已调整
-- 小米 MiMo 已接通
-- 评论审核已通过项目接口联调
-- 正常评论会返回 `provider=xiaomi` 且 `flagged=false`
-- 风险内容会返回 `provider=xiaomi` 且 `flagged=true`
+- 后台保存是否成功
+- 读者端请求的是否是同一个后端
+- 浏览器是否缓存旧页面
+- `GET /api/public/system-configs` 是否已经返回新值
 
-如果你后面把你自己的旧部署文档贴给我，我可以继续按你原有格式再帮你做一版“最终对外发布版”。
+### 15.4 配置文件泄露
+
+处理建议：
+
+- 立刻旋转数据库密码、OSS 密钥、AI Key
+- 清理仓库和部署机上的旧配置副本
+- 不要再把真实配置发到公开聊天、截图或仓库里
