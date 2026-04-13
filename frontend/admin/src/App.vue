@@ -41,6 +41,20 @@ const userForm = ref({ username: '', password: '', avatar: '', role: 'user' })
 const aiForm = ref({ content: '请把这段后台开发说明整理成更适合新手阅读的文字。', title: 'Go 新手博客后台', keyword: 'Go 博客后台', style: '通俗易懂' })
 const agentForm = ref({ text: '', goal: '整理成一篇适合技术博客后台确认的文章草稿', tone: '清晰、自然、适合发布前审核', category_hint: '' })
 const agentChatForm = ref({ message: '' })
+const mobileMenuOpen = ref(false)
+
+const navTabs = [
+  { key: 'dashboard', label: '仪表盘', mobileLabel: '首页', icon: '盘', hint: '查看整体概览' },
+  { key: 'agent', label: 'Agent 工作台', mobileLabel: 'Agent', icon: '稿', hint: '整理素材与草稿' },
+  { key: 'articles', label: '文章管理', mobileLabel: '文章', icon: '文', hint: '编辑与发布内容' },
+  { key: 'briefings', label: '每日简讯', mobileLabel: '简讯', icon: '讯', hint: '管理每日快讯' },
+  { key: 'taxonomy', label: '分类标签', mobileLabel: '分类', icon: '类', hint: '维护分类和标签' },
+  { key: 'comments', label: '评论管理', mobileLabel: '评论', icon: '评', hint: '审核互动内容' },
+  { key: 'users', label: '用户管理', mobileLabel: '用户', icon: '人', hint: '查看用户与权限' },
+  { key: 'ai', label: 'AI 工具台', mobileLabel: 'AI', icon: '智', hint: '生成摘要和优化' },
+  { key: 'settings', label: '系统设置', mobileLabel: '设置', icon: '设', hint: '配置系统与 OSS' }
+]
+const mobilePrimaryTabKeys = ['dashboard', 'articles', 'briefings', 'ai']
 
 const isLoggedIn = computed(() => Boolean(token.value))
 const articlePages = computed(() => Math.max(1, Math.ceil(articleTotal.value / articleQuery.value.page_size)))
@@ -49,6 +63,10 @@ const userPages = computed(() => Math.max(1, Math.ceil(userTotal.value / userQue
 const readyProviderCount = computed(() => providers.value.filter((item) => item.ready).length)
 const draftTagText = computed(() => (agentDraft.value?.tag_names || []).join(', '))
 const agentContextText = computed(() => agentDraft.value?.content || extractedSource.value?.content || '')
+const activeTabMeta = computed(() => navTabs.find((item) => item.key === activeTab.value) || navTabs[0])
+const mobilePrimaryTabs = computed(() => navTabs.filter((item) => mobilePrimaryTabKeys.includes(item.key)))
+const mobileSecondaryTabs = computed(() => navTabs.filter((item) => !mobilePrimaryTabKeys.includes(item.key)))
+const mobileNavActiveKey = computed(() => (mobilePrimaryTabKeys.includes(activeTab.value) ? activeTab.value : 'more'))
 const aiBlocks = computed(() => {
   const value = normalizeAIResult(aiResult.value)
   if (!value) return []
@@ -198,9 +216,19 @@ async function login() {
 }
 
 function logout() {
+  mobileMenuOpen.value = false
   token.value = ''
   user.value = null
   localStorage.removeItem('admin_token')
+}
+
+function setActiveTab(tabKey) {
+  activeTab.value = tabKey
+  mobileMenuOpen.value = false
+}
+
+function toggleMobileMenu() {
+  mobileMenuOpen.value = !mobileMenuOpen.value
 }
 
 async function loadAll() {
@@ -464,21 +492,23 @@ onMounted(() => {
         </div>
 
         <nav class="menu-list">
-          <button :class="{ active: activeTab === 'dashboard' }" @click="activeTab = 'dashboard'">仪表盘</button>
-          <button :class="{ active: activeTab === 'agent' }" @click="activeTab = 'agent'">Agent 工作台</button>
-          <button :class="{ active: activeTab === 'articles' }" @click="activeTab = 'articles'">文章管理</button>
-          <button :class="{ active: activeTab === 'briefings' }" @click="activeTab = 'briefings'">每日简讯</button>
-          <button :class="{ active: activeTab === 'taxonomy' }" @click="activeTab = 'taxonomy'">分类标签</button>
-          <button :class="{ active: activeTab === 'comments' }" @click="activeTab = 'comments'">评论管理</button>
-          <button :class="{ active: activeTab === 'users' }" @click="activeTab = 'users'">用户管理</button>
-          <button :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'">AI 工具台</button>
-          <button :class="{ active: activeTab === 'settings' }" @click="activeTab = 'settings'">系统设置</button>
+          <button v-for="tab in navTabs" :key="tab.key" :class="{ active: activeTab === tab.key }" @click="setActiveTab(tab.key)">{{ tab.label }}</button>
         </nav>
 
         <button class="ghost" @click="logout">退出登录</button>
       </aside>
 
       <section class="content-area">
+        <article class="panel-card mobile-header">
+          <div class="mobile-header-copy">
+            <p class="eyebrow">管理后台</p>
+            <h2>{{ activeTabMeta.label }}</h2>
+            <p class="muted">{{ user?.username || '管理员' }} · {{ user?.role || 'admin' }}</p>
+            <p v-if="systemMessage" class="success-text">{{ systemMessage }}</p>
+          </div>
+          <button class="ghost" @click="logout">退出</button>
+        </article>
+
         <section v-if="activeTab === 'dashboard'" class="stats-grid">
           <article class="panel-card stat-card"><p>文章</p><strong>{{ dashboard.article_count || 0 }}</strong></article>
           <article class="panel-card stat-card"><p>已发布</p><strong>{{ dashboard.published_count || 0 }}</strong></article>
@@ -657,6 +687,50 @@ onMounted(() => {
           </article>
         </section>
       </section>
+
+      <div v-if="mobileMenuOpen" class="mobile-sheet-backdrop" @click="mobileMenuOpen = false">
+        <section class="panel-card mobile-sheet" @click.stop>
+          <div class="section-head mobile-sheet-head">
+            <div>
+              <h3>更多功能</h3>
+              <p class="muted">切换到其它后台模块，或者直接退出登录。</p>
+            </div>
+            <button class="ghost" @click="mobileMenuOpen = false">收起</button>
+          </div>
+          <div class="mobile-sheet-grid">
+            <button
+              v-for="tab in mobileSecondaryTabs"
+              :key="tab.key"
+              class="mobile-sheet-card"
+              :class="{ active: activeTab === tab.key }"
+              @click="setActiveTab(tab.key)"
+            >
+              <span class="mobile-tab-icon">{{ tab.icon }}</span>
+              <span class="mobile-tab-copy">
+                <strong>{{ tab.label }}</strong>
+                <small>{{ tab.hint }}</small>
+              </span>
+            </button>
+          </div>
+          <button class="ghost mobile-logout" @click="logout">退出登录</button>
+        </section>
+      </div>
+
+      <nav class="mobile-tabbar" aria-label="移动端底部导航">
+        <button
+          v-for="tab in mobilePrimaryTabs"
+          :key="tab.key"
+          :class="{ active: mobileNavActiveKey === tab.key }"
+          @click="setActiveTab(tab.key)"
+        >
+          <span class="mobile-tab-icon">{{ tab.icon }}</span>
+          <span class="mobile-tab-label">{{ tab.mobileLabel }}</span>
+        </button>
+        <button :class="{ active: mobileNavActiveKey === 'more' || mobileMenuOpen }" @click="toggleMobileMenu">
+          <span class="mobile-tab-icon">更</span>
+          <span class="mobile-tab-label">更多</span>
+        </button>
+      </nav>
     </template>
   </main>
 </template>
@@ -849,6 +923,128 @@ onMounted(() => {
   flex-direction: column;
   gap: 20px;
   min-width: 0;
+}
+
+.mobile-header,
+.mobile-tabbar,
+.mobile-sheet-backdrop {
+  display: none;
+}
+
+.mobile-header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-header h2 {
+  margin: 0;
+  color: #23374c;
+}
+
+.mobile-tabbar,
+.mobile-sheet-grid,
+.mobile-sheet-card,
+.mobile-tab-copy {
+  display: flex;
+}
+
+.mobile-tabbar {
+  align-items: stretch;
+}
+
+.mobile-sheet-grid {
+  flex-wrap: wrap;
+}
+
+.mobile-tab-copy {
+  flex-direction: column;
+}
+
+.mobile-tabbar button {
+  text-align: center;
+}
+
+.mobile-sheet-card {
+  text-align: left;
+}
+
+.mobile-tab-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(32, 48, 68, 0.08);
+  color: #23374c;
+}
+
+.mobile-tab-label {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.mobile-tab-copy {
+  gap: 2px;
+  text-align: left;
+}
+
+.mobile-tab-copy strong,
+.mobile-tab-copy small {
+  display: block;
+}
+
+.mobile-tab-copy small {
+  color: #6a7683;
+}
+
+.mobile-sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mobile-sheet-card {
+  flex-direction: row;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.4)),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(170, 203, 234, 0.08));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.78),
+    0 12px 24px rgba(45, 67, 92, 0.08);
+}
+
+.mobile-sheet-card.active {
+  background: linear-gradient(160deg, #223040, #355775);
+  color: #fff;
+}
+
+.mobile-sheet-card.active .mobile-tab-icon,
+.mobile-tabbar button.active .mobile-tab-icon {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.mobile-sheet-card.active .mobile-tab-copy small {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.mobile-logout {
+  width: 100%;
+  margin-top: 12px;
 }
 
 .sidebar-top {
@@ -1226,6 +1422,261 @@ button:disabled {
   .item-actions {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 760px) {
+  .page-shell {
+    min-height: 100vh;
+    gap: 12px;
+    padding: 0 0 20px;
+    perspective: none;
+  }
+
+  .login-layout {
+    min-height: auto;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .panel-card,
+  .hero-card {
+    padding: 16px;
+    border-radius: 20px;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    transform-style: flat;
+  }
+
+  .panel-card:hover,
+  .hero-card:hover,
+  .list-item:hover,
+  .provider-card:hover,
+  .chat-item:hover,
+  .stat-card:hover {
+    transform: none;
+  }
+
+  .hero-card {
+    padding: 22px 18px;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .content-area {
+    gap: 12px;
+    padding: 0 12px calc(112px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-header {
+    display: flex;
+  }
+
+  .mobile-header .ghost {
+    width: auto;
+    min-width: 76px;
+  }
+
+  .mobile-tabbar {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 40;
+    padding: 10px;
+    border-radius: 24px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(242, 247, 252, 0.88)),
+      linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(180, 208, 232, 0.1));
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    box-shadow:
+      0 20px 36px rgba(27, 43, 63, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  }
+
+  .mobile-tabbar button {
+    min-height: 60px;
+    padding: 8px 6px;
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: transparent;
+    color: #526272;
+    box-shadow: none;
+  }
+
+  .mobile-tabbar button:hover {
+    transform: none;
+  }
+
+  .mobile-tabbar button.active {
+    background: linear-gradient(160deg, #223040, #355775);
+    color: #fff;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 12px 20px rgba(34, 48, 64, 0.18);
+  }
+
+  .mobile-sheet-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(20, 31, 45, 0.24);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .mobile-sheet {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    margin: 0;
+    padding: 16px;
+    border-radius: 24px;
+    max-height: calc(100vh - 160px);
+    overflow: auto;
+  }
+
+  .mobile-sheet-head .ghost {
+    width: auto;
+  }
+
+  .section-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-head button,
+  .section-head .primary,
+  .section-head .ghost {
+    width: 100%;
+  }
+
+  .stats-grid {
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .list-item,
+  .provider-card,
+  .meta-card,
+  .result-block,
+  .chat-item,
+  .empty-box {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .item-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .item-actions button {
+    min-height: 42px;
+  }
+
+  .chat-box {
+    max-height: 58vh;
+  }
+
+  .chat-form {
+    gap: 10px;
+  }
+
+  .chat-content,
+  .result-pre {
+    overflow-x: auto;
+    word-break: break-word;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    min-height: 44px;
+  }
+
+  textarea {
+    min-height: 110px;
+  }
+}
+
+@media (max-width: 520px) {
+  .panel-card,
+  .hero-card {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .content-area {
+    padding: 0 10px calc(104px + env(safe-area-inset-bottom));
+  }
+
+  .stats-grid {
+    gap: 10px;
+  }
+
+  .button-grid,
+  .button-grid.three,
+  .item-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-tabbar {
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    gap: 6px;
+    padding: 8px;
+    border-radius: 20px;
+  }
+
+  .mobile-tabbar button {
+    min-height: 56px;
+    padding: 8px 4px;
+  }
+
+  .mobile-tab-icon {
+    width: 26px;
+    height: 26px;
+    font-size: 11px;
+  }
+
+  .mobile-tab-label {
+    font-size: 11px;
+  }
+
+  .mobile-sheet {
+    left: 10px;
+    right: 10px;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .mobile-sheet-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pager {
+    grid-template-columns: 1fr auto 1fr;
+    gap: 8px;
+  }
+
+  .stat-card strong {
+    font-size: 24px;
   }
 }
 </style>

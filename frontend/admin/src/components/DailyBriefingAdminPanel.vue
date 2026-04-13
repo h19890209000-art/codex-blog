@@ -516,4 +516,67 @@ button:hover {
     flex-wrap: wrap;
   }
 }
+
+@media (max-width: 760px) {
+  .section-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .section-head button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .search-grid {
+    gap: 10px;
+  }
+
+  .status-card,
+  .script-card,
+  .list-item {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .list-item:hover {
+    transform: none;
+  }
+
+  .item-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .item-actions button {
+    min-height: 42px;
+  }
+
+  .pager {
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .code {
+    overflow-x: auto;
+    word-break: break-word;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 520px) {
+  .item-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .pager {
+    gap: 8px;
+  }
+}
 </style>
