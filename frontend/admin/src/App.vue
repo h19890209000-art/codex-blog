@@ -1,8 +1,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import DailyBriefingAdminPanel from './components/DailyBriefingAdminPanel.vue'
+import { adminApiUrl } from './lib/api'
 
-const apiBase = 'http://127.0.0.1:8080/api/admin'
 const token = ref(localStorage.getItem('admin_token') || '')
 const activeTab = ref('dashboard')
 const loading = ref(false)
@@ -178,7 +178,7 @@ function buildQueryString(data) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`${apiBase}${path}`, options)
+  const response = await fetch(adminApiUrl(path), options)
   const result = await response.json()
   if (!response.ok || result.success === false) throw new Error(result.error || '请求失败')
   return result.data

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
+import { adminApiUrl } from '../lib/api'
 
 const props = defineProps({
   token: {
@@ -10,7 +11,6 @@ const props = defineProps({
 
 const emit = defineEmits(['notify'])
 
-const apiBase = 'http://127.0.0.1:8080/api/admin'
 const loading = ref(false)
 const fetchLoading = ref(false)
 const briefings = ref([])
@@ -59,7 +59,7 @@ function buildQueryString(data) {
 }
 
 async function request(path, options = {}) {
-  const response = await fetch(`${apiBase}${path}`, options)
+  const response = await fetch(adminApiUrl(path), options)
   const result = await response.json()
   if (!response.ok || result.success === false) {
     throw new Error(result.error || '请求失败')

@@ -31,11 +31,11 @@ import DailyBriefingPanel from '../components/DailyBriefingPanel.vue'
 .glass {
   position: relative;
   overflow: hidden;
-  backdrop-filter: blur(28px) saturate(150%);
-  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.24)),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(175, 210, 240, 0.1));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.8)),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(175, 210, 240, 0.12));
   border: 1px solid rgba(255, 255, 255, 0.58);
   box-shadow:
     0 28px 70px rgba(32, 64, 93, 0.18),

@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { publicApiUrl } from '../lib/api'
 
 const props = defineProps({
   compact: {
@@ -9,7 +10,6 @@ const props = defineProps({
   }
 })
 
-const apiBase = 'http://127.0.0.1:8080/api/public'
 const loading = ref(false)
 const errorText = ref('')
 const activeDate = ref('')
@@ -22,7 +22,7 @@ const visibleItems = computed(() => {
 })
 
 async function request(path) {
-  const response = await fetch(`${apiBase}${path}`)
+  const response = await fetch(publicApiUrl(path))
   const result = await response.json()
   if (!response.ok || result.success === false) {
     throw new Error(result.error || '请求失败')
@@ -136,11 +136,11 @@ watch(
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  backdrop-filter: blur(28px) saturate(155%);
-  -webkit-backdrop-filter: blur(28px) saturate(155%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.24)),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.18), rgba(153, 196, 233, 0.1));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.8)),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(153, 196, 233, 0.12));
   border: 1px solid rgba(255, 255, 255, 0.58);
   box-shadow:
     0 28px 68px rgba(32, 64, 93, 0.16),
@@ -298,8 +298,6 @@ h3 {
   cursor: pointer;
   text-decoration: none;
   box-sizing: border-box;
-  backdrop-filter: blur(14px) saturate(145%);
-  -webkit-backdrop-filter: blur(14px) saturate(145%);
   transition: transform 0.22s ease, box-shadow 0.22s ease, background 0.22s ease, color 0.22s ease, border-color 0.22s ease;
 }
 

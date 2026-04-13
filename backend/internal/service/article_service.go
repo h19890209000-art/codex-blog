@@ -27,6 +27,10 @@ func (service *ArticleService) Detail(id int64) (model.Article, error) {
 	return service.articleRepo.FindByID(id)
 }
 
+func (service *ArticleService) Navigation(id int64) (model.Article, model.Article, error) {
+	return service.articleRepo.FindPublishedNavigation(id)
+}
+
 // Search 返回文章搜索结果。
 func (service *ArticleService) Search(keyword string) ([]model.Article, error) {
 	return service.articleRepo.Search(keyword)

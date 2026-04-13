@@ -50,7 +50,7 @@ body::after {
   inset: auto;
   z-index: -1;
   border-radius: 999px;
-  filter: blur(18px);
+  filter: blur(10px);
   pointer-events: none;
 }
 

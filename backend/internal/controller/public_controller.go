@@ -59,6 +59,34 @@ func (controller *PublicController) GetArticle(ctx *gin.Context) {
 	response.Success(ctx, article)
 }
 
+func (controller *PublicController) GetArticleNavigation(ctx *gin.Context) {
+	id, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid article id")
+		return
+	}
+
+	previousArticle, nextArticle, err := controller.articleService.Navigation(id)
+	if err != nil {
+		response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	var previousPayload any
+	var nextPayload any
+	if previousArticle.ID > 0 {
+		previousPayload = previousArticle
+	}
+	if nextArticle.ID > 0 {
+		nextPayload = nextArticle
+	}
+
+	response.Success(ctx, gin.H{
+		"prev_article": previousPayload,
+		"next_article": nextPayload,
+	})
+}
+
 func (controller *PublicController) ListCategories(ctx *gin.Context) {
 	categories, err := controller.portalService.ListCategories()
 	if err != nil {

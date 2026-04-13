@@ -2,8 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import DailyBriefingPanel from '../components/DailyBriefingPanel.vue'
+import { publicApiUrl } from '../lib/api'
 
-const apiBase = 'http://127.0.0.1:8080/api/public'
 const router = useRouter()
 
 const articles = ref([])
@@ -36,7 +36,7 @@ const topFocusArticles = computed(() => filteredArticles.value.slice(0, 4))
 const isFilterMode = computed(() => Boolean(activeCategory.value || activeTag.value))
 
 async function request(path, options = {}) {
-  const response = await fetch(`${apiBase}${path}`, options)
+  const response = await fetch(publicApiUrl(path), options)
   const result = await response.json()
   if (!response.ok || result.success === false) {
     throw new Error(result.error || '请求失败')
@@ -359,11 +359,11 @@ onMounted(async () => {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  backdrop-filter: blur(28px) saturate(150%);
-  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.24)),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(175, 210, 240, 0.08));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.78)),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.42), rgba(175, 210, 240, 0.1));
   border: 1px solid rgba(255, 255, 255, 0.56);
   box-shadow:
     0 30px 70px rgba(32, 64, 93, 0.16),

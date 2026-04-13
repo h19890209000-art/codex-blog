@@ -1,4 +1,5 @@
 logs/
+.run/
 backend/configs/config.local.json
 frontend/admin/dist/
 frontend/reader/dist/

@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ type ArticleRepository interface {
 	ListPublished(keyword string) ([]model.Article, error)
 	ListAdmin(keyword string, status *int, page int, pageSize int) (ArticleListResult, error)
 	FindByID(id int64) (model.Article, error)
+	FindPublishedNavigation(id int64) (model.Article, model.Article, error)
 	Search(keyword string) ([]model.Article, error)
 	FindBySourceKey(sourceType string, sourceKey string) (model.Article, error)
 	ListBySourceType(sourceType string) ([]model.Article, error)
@@ -39,9 +41,17 @@ func NewGormArticleRepository(db *gorm.DB) *GormArticleRepository {
 	return &GormArticleRepository{db: db}
 }
 
+func (repo *GormArticleRepository) publishedPreviewQuery() *gorm.DB {
+	return repo.db.
+		Select("id", "title", "summary", "cover_url", "status", "view_count", "category_id", "created_at", "updated_at").
+		Preload("Category").
+		Preload("Tags").
+		Where("status = ?", 1)
+}
+
 // ListPublished 返回前台已发布文章。
 func (repo *GormArticleRepository) ListPublished(keyword string) ([]model.Article, error) {
-	query := repo.db.Preload("Category").Preload("Tags").Where("status = ?", 1)
+	query := repo.publishedPreviewQuery()
 
 	if strings.TrimSpace(keyword) != "" {
 		likeKeyword := "%" + strings.TrimSpace(keyword) + "%"
@@ -51,6 +61,39 @@ func (repo *GormArticleRepository) ListPublished(keyword string) ([]model.Articl
 	var articles []model.Article
 	err := query.Order("id desc").Find(&articles).Error
 	return articles, err
+}
+
+func (repo *GormArticleRepository) FindPublishedNavigation(id int64) (model.Article, model.Article, error) {
+	var previous model.Article
+	var next model.Article
+
+	prevErr := repo.publishedPreviewQuery().
+		Where("id > ?", id).
+		Order("id asc").
+		First(&previous).
+		Error
+	if prevErr != nil && !errors.Is(prevErr, gorm.ErrRecordNotFound) {
+		return model.Article{}, model.Article{}, prevErr
+	}
+
+	nextErr := repo.publishedPreviewQuery().
+		Where("id < ?", id).
+		Order("id desc").
+		First(&next).
+		Error
+	if nextErr != nil && !errors.Is(nextErr, gorm.ErrRecordNotFound) {
+		return model.Article{}, model.Article{}, nextErr
+	}
+
+	if errors.Is(prevErr, gorm.ErrRecordNotFound) {
+		previous = model.Article{}
+	}
+
+	if errors.Is(nextErr, gorm.ErrRecordNotFound) {
+		next = model.Article{}
+	}
+
+	return previous, next, nil
 }
 
 // ListAdmin 返回后台文章分页列表。

@@ -2,8 +2,8 @@
 import MarkdownIt from 'markdown-it'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { publicApiUrl } from '../lib/api'
 
-const apiBase = 'http://127.0.0.1:8080/api/public'
 const route = useRoute()
 const router = useRouter()
 
@@ -15,7 +15,8 @@ const markdown = new MarkdownIt({
 
 const article = ref(null)
 const comments = ref([])
-const allArticles = ref([])
+const prevArticle = ref(null)
+const nextArticle = ref(null)
 const titleAnalysis = ref('')
 const qaAnswer = ref('')
 const loading = ref(false)
@@ -33,15 +34,8 @@ const markdownContent = computed(() => {
   return markdown.render(article.value.content)
 })
 
-const currentArticleIndex = computed(() => allArticles.value.findIndex((item) => item.id === article.value?.id))
-const prevArticle = computed(() => (currentArticleIndex.value <= 0 ? null : allArticles.value[currentArticleIndex.value - 1]))
-const nextArticle = computed(() => {
-  if (currentArticleIndex.value < 0 || currentArticleIndex.value >= allArticles.value.length - 1) return null
-  return allArticles.value[currentArticleIndex.value + 1]
-})
-
 async function request(path, options = {}) {
-  const response = await fetch(`${apiBase}${path}`, options)
+  const response = await fetch(publicApiUrl(path), options)
   const result = await response.json()
 
   if (!response.ok || result.success === false) {
@@ -57,15 +51,16 @@ async function loadArticleDetail() {
   loading.value = true
 
   try {
-    const [articleData, commentData, articleList] = await Promise.all([
+    const [articleData, commentData, navigationData] = await Promise.all([
       request(`/articles/${articleId.value}`),
       request(`/articles/${articleId.value}/comments`),
-      request('/articles')
+      request(`/articles/${articleId.value}/navigation`)
     ])
 
     article.value = articleData
     comments.value = commentData
-    allArticles.value = articleList || []
+    prevArticle.value = navigationData?.prev_article?.id ? navigationData.prev_article : null
+    nextArticle.value = navigationData?.next_article?.id ? navigationData.next_article : null
     titleAnalysis.value = ''
     qaAnswer.value = ''
     articleQuestion.value = ''
@@ -307,11 +302,11 @@ watch(() => route.params.id, loadArticleDetail)
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  backdrop-filter: blur(28px) saturate(155%);
-  -webkit-backdrop-filter: blur(28px) saturate(155%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.56), rgba(255, 255, 255, 0.24)),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.22), rgba(173, 206, 240, 0.1));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.8)),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.3), rgba(173, 206, 240, 0.12));
   border: 1px solid rgba(255, 255, 255, 0.58);
   box-shadow:
     0 28px 70px rgba(32, 64, 93, 0.18),
@@ -602,7 +597,6 @@ watch(() => route.params.id, loadArticleDetail)
   background: linear-gradient(180deg, var(--button-blue-soft-top), var(--button-blue-soft-bottom));
   color: #f6fbff;
   border-color: var(--button-border);
-  backdrop-filter: blur(12px);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     0 10px 22px rgba(35, 67, 97, 0.14);

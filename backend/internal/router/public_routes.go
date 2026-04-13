@@ -13,6 +13,7 @@ func registerPublicRoutes(engine *gin.Engine, publicController *controller.Publi
 	{
 		publicGroup.GET("/articles", publicController.ListArticles)
 		publicGroup.GET("/articles/:id", publicController.GetArticle)
+		publicGroup.GET("/articles/:id/navigation", publicController.GetArticleNavigation)
 		publicGroup.GET("/categories", publicController.ListCategories)
 		publicGroup.GET("/tags", publicController.ListTags)
 		publicGroup.GET("/archives", publicController.ListArchives)
