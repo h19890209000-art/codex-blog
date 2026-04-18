@@ -37,7 +37,47 @@ func (providerInstance *Provider) Supports(capability provider.Capability) bool 
 }
 
 func (providerInstance *Provider) Chat(ctx context.Context, request provider.ChatRequest) (provider.ChatResponse, error) {
+	if shouldPreferFlash(providerInstance.config.Model, request) {
+		request.Model = "mimo-v2-flash"
+	}
+
 	return providerInstance.compatible.Chat(ctx, request)
+}
+
+func shouldPreferFlash(configuredModel string, request provider.ChatRequest) bool {
+	if strings.TrimSpace(request.Model) != "" {
+		return false
+	}
+
+	if !strings.EqualFold(strings.TrimSpace(configuredModel), "mimo-v2-pro") {
+		return false
+	}
+
+	if request.MaxTokens <= 0 || request.MaxTokens > 1400 {
+		return false
+	}
+
+	if request.Temperature <= 0.2 && request.MaxTokens <= 800 {
+		return true
+	}
+
+	if request.Temperature > 0.3 {
+		return false
+	}
+
+	for _, message := range request.Messages {
+		content := strings.ToLower(strings.TrimSpace(message.Content))
+		if strings.Contains(content, "return strict json") ||
+			strings.Contains(content, "return exactly one json object") ||
+			strings.Contains(content, "strict json only") ||
+			strings.Contains(content, "\"grammar_points\"") ||
+			strings.Contains(content, "\"daily_flow\"") ||
+			strings.Contains(content, "\"coach_reply_en\"") {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (providerInstance *Provider) StreamChat(ctx context.Context, request provider.ChatRequest) (<-chan string, <-chan error) {

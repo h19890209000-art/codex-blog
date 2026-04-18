@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from './views/HomeView.vue'
 import ArticleDetailView from './views/ArticleDetailView.vue'
 import DailyBriefingsView from './views/DailyBriefingsView.vue'
+import DailyBriefingStudyView from './views/DailyBriefingStudyView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -21,6 +22,12 @@ const router = createRouter({
       path: '/briefings',
       name: 'daily-briefings',
       component: DailyBriefingsView
+    },
+    {
+      path: '/briefings/:id/study',
+      name: 'daily-briefing-study',
+      component: DailyBriefingStudyView,
+      props: true
     }
   ],
   scrollBehavior(_to, _from, savedPosition) {

@@ -19,6 +19,9 @@ import (
 
 	"ai-blog/backend/internal/model"
 	"ai-blog/backend/internal/repository"
+	"ai-blog/backend/internal/support"
+
+	"gorm.io/gorm"
 )
 
 const (
@@ -117,6 +120,60 @@ func (service *DailyBriefingService) ListPublic(date string) (map[string]any, er
 		"items":           items,
 		"available_dates": availableDates,
 	}, nil
+}
+
+func (service *DailyBriefingService) GetPublishedByID(id int64) (model.DailyBriefing, error) {
+	item, err := service.repo.FindByID(id)
+	if err != nil {
+		return model.DailyBriefing{}, err
+	}
+	if item.Status != briefingStatusPublished {
+		return model.DailyBriefing{}, gorm.ErrRecordNotFound
+	}
+	return item, nil
+}
+
+func (service *DailyBriefingService) EnsureSourceContent(ctx context.Context, id int64) (model.DailyBriefing, error) {
+	item, err := service.GetPublishedByID(id)
+	if err != nil {
+		return model.DailyBriefing{}, err
+	}
+
+	if strings.TrimSpace(item.SourceContent) != "" {
+		return item, nil
+	}
+
+	sourceContent, err := service.fetchSourceContent(ctx, item)
+	if err != nil {
+		return model.DailyBriefing{}, err
+	}
+
+	now := time.Now()
+	item.SourceContent = sourceContent
+	item.ContentFetchedAt = &now
+
+	if err := service.repo.Update(&item); err != nil {
+		return model.DailyBriefing{}, err
+	}
+
+	return item, nil
+}
+
+func (service *DailyBriefingService) SaveTranslatedContent(id int64, translatedContent string) (model.DailyBriefing, error) {
+	item, err := service.GetPublishedByID(id)
+	if err != nil {
+		return model.DailyBriefing{}, err
+	}
+
+	now := time.Now()
+	item.TranslatedContent = strings.TrimSpace(translatedContent)
+	item.TranslatedAt = &now
+
+	if err := service.repo.Update(&item); err != nil {
+		return model.DailyBriefing{}, err
+	}
+
+	return item, nil
 }
 
 func (service *DailyBriefingService) ListAdmin(date string, keyword string, status *int, page int, pageSize int) (repository.DailyBriefingListResult, error) {
@@ -481,4 +538,55 @@ func parseBriefingTime(value string) (*time.Time, error) {
 func buildBriefingHash(date string, sourceURL string, title string) string {
 	sum := sha1.Sum([]byte(strings.TrimSpace(date) + "|" + strings.TrimSpace(sourceURL) + "|" + strings.TrimSpace(title)))
 	return hex.EncodeToString(sum[:])
+}
+
+func (service *DailyBriefingService) fetchSourceContent(ctx context.Context, item model.DailyBriefing) (string, error) {
+	if strings.TrimSpace(item.SourceURL) == "" {
+		return fallbackBriefingContent(item), nil
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, item.SourceURL, nil)
+	if err != nil {
+		return fallbackBriefingContent(item), nil
+	}
+	request.Header.Set("User-Agent", "codex-blog-study-fetcher/1.0")
+	request.Header.Set("Accept-Language", "en-US,en;q=0.9")
+
+	client := &http.Client{Timeout: 20 * time.Second}
+	response, err := client.Do(request)
+	if err != nil {
+		return fallbackBriefingContent(item), nil
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode >= http.StatusBadRequest {
+		return fallbackBriefingContent(item), nil
+	}
+
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		return fallbackBriefingContent(item), nil
+	}
+
+	sourceContent := support.ExtractReadableTextFromHTML(string(body))
+	if strings.TrimSpace(sourceContent) == "" {
+		return fallbackBriefingContent(item), nil
+	}
+
+	return sourceContent, nil
+}
+
+func fallbackBriefingContent(item model.DailyBriefing) string {
+	parts := make([]string, 0, 3)
+	if strings.TrimSpace(item.Title) != "" {
+		parts = append(parts, strings.TrimSpace(item.Title))
+	}
+	if strings.TrimSpace(item.Summary) != "" {
+		parts = append(parts, strings.TrimSpace(item.Summary))
+	}
+	if strings.TrimSpace(item.SourceURL) != "" {
+		parts = append(parts, "Original link: "+strings.TrimSpace(item.SourceURL))
+	}
+
+	return strings.Join(parts, "\n\n")
 }

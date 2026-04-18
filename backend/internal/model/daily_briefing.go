@@ -21,6 +21,10 @@ type DailyBriefing struct {
 	Language          string     `json:"language" gorm:"type:varchar(10);default:'en'"`
 	OriginFeed        string     `json:"origin_feed" gorm:"column:origin_feed;type:varchar(255);default:''"`
 	SourcePublishedAt *time.Time `json:"source_published_at" gorm:"column:source_published_at"`
+	SourceContent     string     `json:"source_content,omitempty" gorm:"column:source_content;type:longtext"`
+	TranslatedContent string     `json:"translated_content,omitempty" gorm:"column:translated_content;type:longtext"`
+	ContentFetchedAt  *time.Time `json:"content_fetched_at,omitempty" gorm:"column:content_fetched_at"`
+	TranslatedAt      *time.Time `json:"translated_at,omitempty" gorm:"column:translated_at"`
 
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`

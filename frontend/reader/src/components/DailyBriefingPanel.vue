@@ -123,7 +123,10 @@ watch(
             </p>
             <h3>{{ item.sort_order }}. {{ item.title }}</h3>
           </div>
-          <button class="action-button action-button--soft inline-action" @click="openSource(item.source_url)">原文</button>
+          <div class="inline-actions">
+            <RouterLink class="action-button action-button--soft inline-action" :to="`/briefings/${item.id}/study`">英语精读</RouterLink>
+            <button class="action-button action-button--soft inline-action" @click="openSource(item.source_url)">原文</button>
+          </div>
         </div>
         <p class="summary">{{ item.summary || '点击原文查看完整报道。' }}</p>
       </article>
@@ -374,6 +377,12 @@ h3 {
   align-self: start;
 }
 
+.inline-actions {
+  display: grid;
+  gap: 10px;
+  justify-items: end;
+}
+
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.24em;
@@ -435,6 +444,10 @@ h3 {
   .inline-action {
     justify-self: stretch;
     width: 100%;
+  }
+
+  .inline-actions {
+    justify-items: stretch;
   }
 
   .action-button {

@@ -1,8 +1,10 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"ai-blog/backend/internal/dto"
 	"ai-blog/backend/internal/response"
@@ -245,4 +247,210 @@ func (controller *PublicController) SiteQA(ctx *gin.Context) {
 	}
 
 	response.Success(ctx, result)
+}
+
+func (controller *PublicController) GetDailyBriefingStudy(ctx *gin.Context) {
+	briefingID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid briefing id")
+		return
+	}
+
+	item, err := controller.dailyBriefingService.EnsureSourceContent(ctx.Request.Context(), briefingID)
+	if err != nil {
+		response.Error(ctx, http.StatusNotFound, err.Error())
+		return
+	}
+
+	translationProvider := "cached"
+	translationHint := ""
+	if strings.TrimSpace(item.TranslatedContent) == "" {
+		translated, err := controller.aiService.TranslateBriefingForStudy(ctx.Request.Context(), item.Title, item.SourceContent)
+		if err != nil {
+			response.Error(ctx, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		item, err = controller.dailyBriefingService.SaveTranslatedContent(briefingID, strings.TrimSpace(toStringValue(translated["translation"])))
+		if err != nil {
+			response.Error(ctx, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		translationProvider = toStringValue(translated["provider"])
+		translationHint = toStringValue(translated["hint"])
+	}
+
+	response.Success(ctx, gin.H{
+		"id":                   item.ID,
+		"briefing_date":        item.BriefingDate,
+		"title":                item.Title,
+		"summary":              item.Summary,
+		"source_name":          item.SourceName,
+		"source_url":           item.SourceURL,
+		"source_published_at":  item.SourcePublishedAt,
+		"source_content":       item.SourceContent,
+		"translated_content":   item.TranslatedContent,
+		"translation_provider": translationProvider,
+		"translation_hint":     translationHint,
+	})
+}
+
+func (controller *PublicController) BuildDailyBriefingLearningPlan(ctx *gin.Context) {
+	briefingID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid briefing id")
+		return
+	}
+
+	var request dto.BriefingLearningPlanRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid request payload")
+		return
+	}
+
+	item, err := controller.dailyBriefingService.EnsureSourceContent(ctx.Request.Context(), briefingID)
+	if err != nil {
+		response.Error(ctx, http.StatusNotFound, err.Error())
+		return
+	}
+
+	if strings.TrimSpace(item.TranslatedContent) == "" {
+		translated, err := controller.aiService.TranslateBriefingForStudy(ctx.Request.Context(), item.Title, item.SourceContent)
+		if err != nil {
+			response.Error(ctx, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		item, err = controller.dailyBriefingService.SaveTranslatedContent(briefingID, strings.TrimSpace(toStringValue(translated["translation"])))
+		if err != nil {
+			response.Error(ctx, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	result, err := controller.aiService.BuildBriefingLearningPlan(
+		ctx.Request.Context(),
+		item.Title,
+		item.Summary,
+		item.SourceContent,
+		item.TranslatedContent,
+		request.Goal,
+	)
+	if err != nil {
+		response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(ctx, result)
+}
+
+func (controller *PublicController) RunDailyBriefingRoleplay(ctx *gin.Context) {
+	briefingID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid briefing id")
+		return
+	}
+
+	var request dto.BriefingRoleplayRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid request payload")
+		return
+	}
+	if strings.TrimSpace(request.LearnerReply) == "" {
+		response.Error(ctx, http.StatusBadRequest, "learner_reply is required")
+		return
+	}
+
+	item, err := controller.dailyBriefingService.GetPublishedByID(briefingID)
+	if err != nil {
+		response.Error(ctx, http.StatusNotFound, err.Error())
+		return
+	}
+
+	result, err := controller.aiService.RunBriefingRoleplay(
+		ctx.Request.Context(),
+		item.Title,
+		item.Summary,
+		request.Goal,
+		request.Scene,
+		request.LearnerReply,
+	)
+	if err != nil {
+		response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(ctx, result)
+}
+
+func (controller *PublicController) ExplainDailyBriefingWord(ctx *gin.Context) {
+	briefingID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid briefing id")
+		return
+	}
+
+	var request dto.StudyWordRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid request payload")
+		return
+	}
+	if strings.TrimSpace(request.Word) == "" || strings.TrimSpace(request.Sentence) == "" {
+		response.Error(ctx, http.StatusBadRequest, "word and sentence are required")
+		return
+	}
+
+	item, err := controller.dailyBriefingService.GetPublishedByID(briefingID)
+	if err != nil {
+		response.Error(ctx, http.StatusNotFound, err.Error())
+		return
+	}
+
+	result, err := controller.aiService.ExplainEnglishWord(ctx.Request.Context(), item.Title, request.Sentence, request.Word)
+	if err != nil {
+		response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(ctx, result)
+}
+
+func (controller *PublicController) AnalyzeDailyBriefingSentence(ctx *gin.Context) {
+	briefingID, err := strconv.ParseInt(ctx.Param("id"), 10, 64)
+	if err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid briefing id")
+		return
+	}
+
+	var request dto.StudySentenceRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
+		response.Error(ctx, http.StatusBadRequest, "invalid request payload")
+		return
+	}
+	if strings.TrimSpace(request.Sentence) == "" {
+		response.Error(ctx, http.StatusBadRequest, "sentence is required")
+		return
+	}
+
+	item, err := controller.dailyBriefingService.GetPublishedByID(briefingID)
+	if err != nil {
+		response.Error(ctx, http.StatusNotFound, err.Error())
+		return
+	}
+
+	result, err := controller.aiService.AnalyzeEnglishSentence(ctx.Request.Context(), item.Title, request.Sentence)
+	if err != nil {
+		response.Error(ctx, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Success(ctx, result)
+}
+
+func toStringValue(value any) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(fmt.Sprint(value))
 }

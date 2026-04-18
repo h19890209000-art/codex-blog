@@ -89,11 +89,21 @@ func NewApp() (*App, error) {
 	ossSyncService.StartAutoSync()
 
 	// 第十一步：创建标准 HTTP Server。
+	writeTimeoutSeconds := appConfig.Server.WriteTimeoutSeconds
+	if writeTimeoutSeconds < 90 {
+		writeTimeoutSeconds = 90
+	}
+
+	readTimeoutSeconds := appConfig.Server.ReadTimeoutSeconds
+	if readTimeoutSeconds <= 0 {
+		readTimeoutSeconds = 15
+	}
+
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf("%s:%d", appConfig.Server.Host, appConfig.Server.Port),
 		Handler:           engine,
-		ReadHeaderTimeout: time.Duration(appConfig.Server.ReadTimeoutSeconds) * time.Second,
-		WriteTimeout:      time.Duration(appConfig.Server.WriteTimeoutSeconds) * time.Second,
+		ReadHeaderTimeout: time.Duration(readTimeoutSeconds) * time.Second,
+		WriteTimeout:      time.Duration(writeTimeoutSeconds) * time.Second,
 	}
 
 	return &App{
